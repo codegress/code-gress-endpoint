@@ -107,5 +107,14 @@ class CodegressApi(remote.Service):
 			lang.placeholder = data.placeholder
 		return lang
 
+	@endpoints.method(LanguageDetail, Acknowledge, name='language.remove',path='language/remove')
+	def remove_lang(self,request):
+		lang_key = ndb.Key('LanguageModel',request.name)
+		ack = Acknowledge(status=False)
+		data = lang_key.get()
+		if lang_key.get():
+			lang_key.delete()
+			ack.status = True
+		return ack
 
 APPLICATION = endpoints.api_server([CodegressApi])
