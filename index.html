@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Create Account</title>
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+</head>
+<body>
+	<div class="container">
+		<form method="POST" id="sigin-form">
+			<p><label for="username">Username : </label><input type="text" id="username" name="username" required></p>
+			<p><label for="password">Password : </label><input type="password" id="password" name="password" required></p>
+			<p><label for="email">Email : </label><input type="email" id="email" name="email" required></p>
+			<p><input type="submit" id="submit" style="display:none" value="Register"></p>
+		</form>
+	</div>
+	<script>
+	$('#sigin-form').submit(function(event){
+		event.preventDefault();
+		var data = {};
+		data['username'] = $('#username').val();
+		data['password'] = $('#password').val();
+		data['email'] = $('#email').val();
+		gapi.client.codegress.user.createAccount(data).execute(function(resp){
+			if(!resp.code && resp.status){
+				console.log('Success :)');
+			}
+			else console.log('Account Declined!!');
+		});
+	});
+	
+	var enableButtons = function(){
+		$('#submit').css({display:''});
+	};
+
+	var init = function(){
+		actualInit('https://code-gress-endpoint.appspot.com/_ah/api');
+	};
+
+	var actualInit = function(apiRoot){
+		var apisToLoad;
+		var callback = function(){
+			if(--apisToLoad == 0){
+				enableButtons();
+			}
+		};
+		apisToLoad = 1;
+		gapi.client.load('codegress', 'v1', callback, apiRoot);
+	};	
+	</script>
+</body>
+	<script src="https://apis.google.com/js/client.js?onload=init"></script>
+</html>

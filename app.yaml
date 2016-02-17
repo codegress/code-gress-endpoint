@@ -1,0 +1,17 @@
+application: code-gress-endpoint
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: true
+
+handlers:
+- url: /_ah/spi/.*
+  script: codegress_api.APPLICATION
+  secure: always
+- url: /
+  upload: index\.html
+  static_files: index.html
+  secure: always
+libraries:
+- name: endpoints
+  version: 1.0
