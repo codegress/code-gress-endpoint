@@ -19,6 +19,32 @@ class Language(messages.Message):
 	execute = messages.StringField(5) 
 	placeholder = messages.StringField(6)
 
+class Acknowledge(messages.Message):
+	status = messages.BooleanField(1, required=True)
+	comment = messages.StringField(2)
+	data = messages.StringField(3, repeated=True)
+
+class LanguageDetail(messages.Message):
+	name = messages.StringField(1, required=True)
+
+class TestCase(messages.Message):
+	test_in = messages.StringField(1, required=True)
+	test_out = messages.StringField(2, required=True)
+	points = messages.FloatField(3, required=True)
+	ques_title = messages.StringField(4, required=True)
+
+class TestCases(messages.Message):
+	cases = messages.MessageField(TestCase, 1, repeated=True)
+
+# class QuestionModel(ndb.Model):
+	# title = ndb.StringProperty(required=True)
+	
+class TestCaseModel(ndb.Model):
+	test_in = ndb.StringProperty(required=True)
+	test_out = ndb.StringProperty(required=True)
+	points = ndb.FloatProperty(required=True)
+	ques_title = ndb.StringProperty(required=True)
+
 class AccountModel(ndb.Model):
 	username = ndb.StringProperty(required=True)
 	password = ndb.StringProperty(required=True)
@@ -33,11 +59,3 @@ class LanguageModel(ndb.Model):
 	compile = ndb.StringProperty(required=True)
 	execute = ndb.StringProperty() 
 	placeholder = ndb.StringProperty()
-
-class Acknowledge(messages.Message):
-	status = messages.BooleanField(1, required=True)
-	comment = messages.StringField(2)
-	data = messages.StringField(3, repeated=True)
-
-class LanguageDetail(messages.Message):
-	name = messages.StringField(1, required=True)
