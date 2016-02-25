@@ -24,8 +24,9 @@ class Acknowledge(messages.Message):
 	comment = messages.StringField(2)
 	data = messages.StringField(3, repeated=True)
 
-class LanguageDetail(messages.Message):
-	name = messages.StringField(1, required=True)
+class Query(messages.Message):
+	name = messages.StringField(1)
+	domain = messages.StringField(2)
 
 class TestCase(messages.Message):
 	test_in = messages.StringField(1, required=True)
@@ -36,8 +37,18 @@ class TestCase(messages.Message):
 class TestCases(messages.Message):
 	cases = messages.MessageField(TestCase, 1, repeated=True)
 
-# class QuestionModel(ndb.Model):
-	# title = ndb.StringProperty(required=True)
+class Question(messages.Message):
+	title = messages.StringField(1, required=True)
+	text = messages.StringField(2, required=True)
+	domain = messages.StringField(3, required=True)
+
+class Questions(messages.Message):
+	ques = messages.MessageField(Question, 1, repeated=True)
+
+class QuestionModel(ndb.Model):
+	title = ndb.StringProperty(required=True)
+	text = ndb.StringProperty(required=True)
+	domain = ndb.StringProperty(required=True)
 	
 class TestCaseModel(ndb.Model):
 	test_in = ndb.StringProperty(required=True)
