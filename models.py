@@ -1,9 +1,10 @@
 from google.appengine.ext import ndb
 from protorpc import messages
 from protorpc import message_types
+from endpoints_proto_datastore.ndb import EndpointsModel  
 
 class Account(messages.Message):
-	username = messages.StringField(1,required=True)
+	username = messages.StringField(1,required=True) 
 	password = messages.StringField(2,required=True)
 	email = messages.StringField(3,required=True)
 
@@ -47,7 +48,7 @@ class Questions(messages.Message):
 
 class QuestionModel(ndb.Model):
 	title = ndb.StringProperty(required=True)
-	text = ndb.StringProperty(required=True)
+	text = ndb.StringProperty(required=True, indexed=False)
 	domain = ndb.StringProperty(required=True)
 	
 class TestCaseModel(ndb.Model):
@@ -55,6 +56,13 @@ class TestCaseModel(ndb.Model):
 	test_out = ndb.StringProperty(required=True)
 	points = ndb.FloatProperty(required=True)
 	ques_title = ndb.StringProperty(required=True)
+
+class SubmissionModel(EndpointsModel):
+	question_title = ndb.StringProperty(required=True)
+	question_domain = ndb.StringProperty(required=True)
+	submission_text = ndb.TextProperty(required=True)
+	submission_date = ndb.DateTimeProperty(auto_now_add=True)
+	submitted_user = ndb.StringProperty(required=True)
 
 class AccountModel(ndb.Model):
 	username = ndb.StringProperty(required=True)

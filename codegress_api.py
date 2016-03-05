@@ -1,6 +1,5 @@
 import endpoints
-
-# from endpoints_proto_datastore.ndb import EndpointsModel  
+ 
 from models import Account
 from models import AccountModel
 from models import Acknowledge
@@ -14,8 +13,10 @@ from models import TestCase
 from models import TestCases
 from models import TestCaseModel
 from models import SignIn
+from models import SubmissionModel
 from protorpc import remote
 from hashlib import md5
+import datetime
 from google.appengine.ext import ndb
 
 @endpoints.api(name='codegress',version='v1')
@@ -28,33 +29,36 @@ class CodegressApi(remote.Service):
 		ack = Acknowledge(status=False)
 		account_key = ndb.Key('AccountModel',request.email)
 		user = AccountModel.query(ancestor=account_key).fetch()
-		if not user:
+		username = AccountModel.query(AccountModel.username == request.username).fetch()
+		if username or user:
+			if username:
+				ack.data += ['username']
+			if user:
+				ack.data += ['email']
+		else:
 			hashed_password = md5(request.password).hexdigest()
 			account = AccountModel(parent=account_key,username=request.username, 
 						password=hashed_password, email=request.email)
 			account.put()
 			ack.status = True
-		elif user[0].username == request.username:
-			ack.comment = 'Username already taken'
-		elif user[0].email == request.email:
-			ack.comment = 'Email already taken'
-		else:
-			ack.comment = 'Something went wrong..'
 		return ack
 
 	@endpoints.method(SignIn, Acknowledge, name='user.validateAccount', path='user/validate')
 	def check_user(self, request):
 		account_key = ndb.Key('AccountModel',request.email)
 		ack = Acknowledge(status=False)
-		data = AccountModel.query(ancestor=account_key).fetch()
-		if data[0] and data[0].username:
+		user = AccountModel.query(ancestor=account_key).fetch()
+		if not user:
+			user = AccountModel.query(AccountModel.username == request.email).fetch()
+		if user:
 			hashed_password = md5(request.password).hexdigest()
-			if hashed_password == data[0].password:
-				ack.status = True	
-				ack.data = [request.email]
+			if hashed_password == user[0].password:
+				ack.data = [user[0].username]	
+				ack.status = True
 			else:
-				ack.status = False
-				ack.comment = hashed_password
+				ack.data += ["password"]
+		else:
+			ack.data += ["username"]
 		return ack
 
 	@endpoints.method(Language, Acknowledge, name='language.addLanguage', path='language/insert', http_method='POST')
@@ -83,7 +87,7 @@ class CodegressApi(remote.Service):
 			lang.placeholder = data[0].placeholder
 		return lang
 
-	@endpoints.method(Question, Acknowledge, name='question.addQuestion', path='question/add')
+	@endpoints.method(Question, Acknowledge, name='question.addQuestion', path='question/add', http_method='POST')
 	def add_question(self, request):
 		ack = Acknowledge(status=False)
 		domain_key = ndb.Key('Domain', request.domain)
@@ -95,27 +99,23 @@ class CodegressApi(remote.Service):
 			ack.status = True
 		return ack
 
-	@endpoints.method(Query, Questions, name='question.getDomainQuestion', path='question/domain/get')
-	def get_domain_questions(self, request):
-		domain_key = ndb.Key('Domain', request.domain)
-		ques_query = QuestionModel.query(ancestor=domain_key).fetch()
+	@endpoints.method(Query, Questions, name='question.getQuestion', path='question/get')
+	def get_question(self,request):
+		ancestor_key = None
+		if request.domain:
+			ancestor_key = ndb.Key('Domain', request.domain)
+			if request.name:
+				ancestor_key = ndb.Key(QuestionModel, request.name, parent=ancestor_key)
+			ques_query = QuestionModel.query(ancestor=ancestor_key).fetch()
+		else:
+			ques_query = QuestionModel.query().fetch()
 		ques_list = []
 		for q in ques_query:
-			current_ques = Question(title=q.title, text=q.text, domain=q.domain)
-			ques_list.append(current_ques)
+			ques = Question(title=q.title, text=q.text, domain=q.domain)
+			ques_list += [ques]
 		return Questions(ques=ques_list)
 
-	@endpoints.method(Query, Question, name='question.getQuestion', path='question/get')
-	def get_question(self,request):
-		domain_key = ndb.Key('Domain', request.domain)
-		ques_key = ndb.Key(QuestionModel, request.name, parent=domain_key)
-		ques_query = QuestionModel.query(ancestor=ques_key).fetch()
-		ques = Question(title=request.name, text='', domain=request.domain)
-		for q in ques_query:
-			ques.text = q.text
-		return ques
-
-	@endpoints.method(TestCase, Acknowledge, name='testcase.addTestcase',path='testcase/add')
+	@endpoints.method(TestCase, Acknowledge, name='testcase.addTestcase',path='testcase/add',http_method='POST')
 	def add_testcase(self, request):
 		testcase_key = ndb.Key(TestCaseModel,request.ques_title)
 		testcase = TestCaseModel(parent=testcase_key, test_in=request.test_in, test_out=request.test_out, 
@@ -134,5 +134,20 @@ class CodegressApi(remote.Service):
 						ques_title=testcase.ques_title, points=testcase.points)
 			testcase_list.append(case)
 		return TestCases(cases=testcase_list)
+
+	@SubmissionModel.method(name='submission.addSubmission', path='submission/add',http_method='POST')
+	def add_submission(self, submission):
+		submission.put()
+		return submission
+	
+	@SubmissionModel.query_method(query_fields=('question_domain', 'question_title'),
+		name='submission.getSubmission',path='submission/get')
+	def get_submission(self, query):
+		return query
+
+	@SubmissionModel.query_method(collection_fields=('question_title','submitted_user'),
+		name='submission.getSubmissions',path='submissions/get')
+	def get_submissions(self,query):
+		return query
 
 APPLICATION = endpoints.api_server([CodegressApi])
