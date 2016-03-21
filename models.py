@@ -17,7 +17,7 @@ class Language(messages.Message):
 	mode = messages.StringField(2,required=True)
 	ext = messages.StringField(3,required=True)
 	compile = messages.StringField(4,required=True)
-	execute = messages.StringField(5) 
+	execute = messages.StringField(5)
 	placeholder = messages.StringField(6)
 
 class Acknowledge(messages.Message):
@@ -46,6 +46,21 @@ class Question(messages.Message):
 class Questions(messages.Message):
 	ques = messages.MessageField(Question, 1, repeated=True)
 
+class AccountModel(ndb.Model):
+	username = ndb.StringProperty(required=True)
+	password = ndb.StringProperty(required=True)
+	email = ndb.StringProperty(required=True)
+	fullname = ndb.StringProperty()
+	country = ndb.StringProperty()
+
+class LanguageModel(EndpointsModel):
+	name = ndb.StringProperty(required=True)
+	mode = ndb.StringProperty(required=True)
+	ext = ndb.StringProperty(required=True)
+	compile = ndb.StringProperty(required=True)
+	execute = ndb.StringProperty() 
+	placeholder = ndb.StringProperty()
+
 class QuestionModel(ndb.Model):
 	title = ndb.StringProperty(required=True)
 	text = ndb.StringProperty(required=True, indexed=False)
@@ -58,23 +73,27 @@ class TestCaseModel(ndb.Model):
 	ques_title = ndb.StringProperty(required=True)
 
 class SubmissionModel(EndpointsModel):
-	question_title = ndb.StringProperty(required=True)
-	question_domain = ndb.StringProperty(required=True)
-	submission_text = ndb.TextProperty(required=True)
-	submission_date = ndb.DateTimeProperty(auto_now_add=True)
+	ques_title = ndb.StringProperty(required=True)
+	submission_text = ndb.TextProperty()
+	submission_date = ndb.DateTimeProperty()
 	submitted_user = ndb.StringProperty(required=True)
 
-class AccountModel(ndb.Model):
-	username = ndb.StringProperty(required=True)
-	password = ndb.StringProperty(required=True)
-	email = ndb.StringProperty(required=True)
-	fullname = ndb.StringProperty()
-	country = ndb.StringProperty()
+class ChallengeModel(ndb.Model):
+	title = ndb.StringProperty(required=True)
+	description = ndb.StringProperty()
+	start_time = ndb.DateTimeProperty()
+	end_time = ndb.DateTimeProperty()
+	points = ndb.FloatProperty()
 
-class LanguageModel(ndb.Model):
-	name = ndb.StringProperty(required=True)
-	mode = ndb.StringProperty(required=True)
-	ext = ndb.StringProperty(required=True)
-	compile = ndb.StringProperty(required=True)
-	execute = ndb.StringProperty() 
-	placeholder = ndb.StringProperty()
+class SolveModel(ndb.Model):
+	time_taken = ndb.DateTimeProperty(required=True)
+	points = ndb.FloatProperty(required=True)
+
+class AcceptModel(ndb.Model):
+	solved = ndb.StructuredProperty(SolveModel)
+
+class UserChallengerModel(ndb.Model):
+	challenge = ndb.StructuredProperty(ChallengeModel, required=True)
+	challenger = ndb.StructuredProperty(AccountModel, required=True)
+	challengee = ndb.StructuredProperty(AccountModel, required=True)
+	accept = ndb.StructuredProperty(AcceptModel)

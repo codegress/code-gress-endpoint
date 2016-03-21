@@ -1,7 +1,7 @@
 import endpoints
  
 from models import Account
-from models import AccountModel
+from models import AccountModel 
 from models import Acknowledge
 from models import Language
 from models import LanguageModel
@@ -16,7 +16,7 @@ from models import SignIn
 from models import SubmissionModel
 from protorpc import remote
 from hashlib import md5
-import datetime
+from datetime import datetime
 from google.appengine.ext import ndb
 
 @endpoints.api(name='codegress',version='v1')
@@ -61,40 +61,23 @@ class CodegressApi(remote.Service):
 			ack.data += ["username"]
 		return ack
 
-	@endpoints.method(Language, Acknowledge, name='language.addLanguage', path='language/insert', http_method='POST')
-	def insert_lang(self, request):
-		ack = Acknowledge(status=False)
-		lang_key = ndb.Key('LanguageModel',request.name)
-		lang = LanguageModel.query(ancestor=lang_key).fetch()
-		if not lang:
-			new_lang = LanguageModel(parent=lang_key, name=request.name, mode=request.mode,ext=request.ext, 
-				compile=request.compile, execute=request.execute, placeholder=request.placeholder)
-			new_lang.put()
-			ack.status = True
-		return ack
+	@LanguageModel.method(name='language.addLanguage', path='language/insert', http_method='POST')
+	def insert_lang(self,language):
+		language.put()
+		return language
 
-	@endpoints.method(Query, Language, name='language.getLanguage',path='language/get')
-	def get_lang(self, request):
-		lang_key = ndb.Key('LanguageModel',request.name)
-		lang = Language(name='',mode='',ext='',compile='',execute='',placeholder='')
-		data = LanguageModel.query(ancestor=lang_key).fetch()
-		if data and data[0]:
-			lang.name = data[0].name
-			lang.mode = data[0].mode
-			lang.ext = data[0].ext
-			lang.compile = data[0].compile
-			lang.execute = data[0].execute
-			lang.placeholder = data[0].placeholder
-		return lang
+	@LanguageModel.query_method(query_fields=('name',),name='language.getLanguage',path='language/get')
+	def get_lang(self, language_query):
+		return language_query
 
 	@endpoints.method(Question, Acknowledge, name='question.addQuestion', path='question/add', http_method='POST')
 	def add_question(self, request):
 		ack = Acknowledge(status=False)
 		domain_key = ndb.Key('Domain', request.domain)
-		ques_key = ndb.Key(QuestionModel,request.title, parent=domain_key)
+		ques_key = ndb.Key(QuestionModel, request.title, parent=domain_key)
 		ques = QuestionModel.query(ancestor=ques_key).fetch()
 		if not ques:
-			ques = QuestionModel(parent=ques_key,title=request.title, text=request.text, domain=request.domain)
+			ques = QuestionModel(parent=ques_key, title=request.title, text=request.text, domain=request.domain)
 			ques.put()
 			ack.status = True
 		return ack
@@ -135,19 +118,15 @@ class CodegressApi(remote.Service):
 			testcase_list.append(case)
 		return TestCases(cases=testcase_list)
 
-	@SubmissionModel.method(name='submission.addSubmission', path='submission/add',http_method='POST')
-	def add_submission(self, submission):
+	@SubmissionModel.method(request_fields=('ques_title','submission_text','submitted_user'),
+		name='submission.addSubmission',path='submission/add',http_method='POST')
+	def add_submission(self,submission):
+		submission.submission_date = datetime.now()
 		submission.put()
 		return submission
 	
-	@SubmissionModel.query_method(query_fields=('question_domain', 'question_title'),
-		name='submission.getSubmission',path='submission/get')
-	def get_submission(self, query):
-		return query
-
-	@SubmissionModel.query_method(collection_fields=('question_title','submitted_user'),
-		name='submission.getSubmissions',path='submissions/get')
-	def get_submissions(self,query):
-		return query
+	@SubmissionModel.query_method(query_fields=('ques_title','submitted_user'),name='submission.getSubmission',path='submission/get')
+	def get_submission(self, submission_query):
+		return submission_query
 
 APPLICATION = endpoints.api_server([CodegressApi])
