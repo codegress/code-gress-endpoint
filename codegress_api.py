@@ -1,5 +1,5 @@
 import endpoints
- 
+import re 
 from models import Account
 from models import AccountModel 
 from models import Acknowledge
@@ -14,6 +14,11 @@ from models import TestCases
 from models import TestCaseModel
 from models import SignIn
 from models import SubmissionModel
+from models import ChallengeModel
+from models import UserChallengeModel
+from models import FollowModel
+from models import Follow
+from models import Follows
 from protorpc import remote
 from hashlib import md5
 from datetime import datetime
@@ -118,6 +123,39 @@ class CodegressApi(remote.Service):
 			testcase_list.append(case)
 		return TestCases(cases=testcase_list)
 
+	@endpoints.method(Query, Acknowledge, name='user.shortListed', path='user/shortlist')
+	def get_shortlisted_users(self,request):
+		shortListed_users = []
+		accounts = AccountModel.query(AccountModel.username >= request.name).fetch()
+		for account in accounts:
+			matched = re.match(request.name, account.username, re.I)
+			if matched:
+				shortListed_users.append(account.username)
+		return Acknowledge(data=shortListed_users, status=True)
+
+	@endpoints.method(Follow,Follow,name='user.Follow',path='user/follow')
+	def add_follow(self, request):
+		followee_key = ndb.Key(FollowModel, request.followee)
+		follow = FollowModel(follower=request.follower, followee=request.followee, parent=followee_key)
+		follow.put()
+		return Follow(followers=request.follower, followee=request.followee)
+
+	@endpoints.method(Query, Follows,name='user.getFollowers',path='user/get/followers')
+	def get_followers(self, request):
+		follow_query = FollowModel.query(followee=request.name).fetch()
+		follow_list = []
+		for follow in follow_query:
+			follow_list += [follow.username]
+		return Follows(follows=follow_list)
+
+	@endpoints.method(Query, Follows,name='user.getFollowees',path='user/get/followees')
+	def get_followees(self, request):
+		follow_query = FollowModel.query(follower=request.name).fetch()
+		follow_list = []
+		for follow in follow_query:
+			follow_list += [follow.username]
+		return Follows(follows=follow_list)
+
 	@SubmissionModel.method(request_fields=('ques_title','submission_text','submitted_user'),
 		name='submission.addSubmission',path='submission/add',http_method='POST')
 	def add_submission(self,submission):
@@ -128,5 +166,15 @@ class CodegressApi(remote.Service):
 	@SubmissionModel.query_method(query_fields=('ques_title','submitted_user'),name='submission.getSubmission',path='submission/get')
 	def get_submission(self, submission_query):
 		return submission_query
+
+	@UserChallengeModel.method(name='user.addChallenge',path='user/add/challenge')
+	def add_user_challenge(self, user_challenge):
+		user_challenge.challenge.start_date = datetime.now()
+		user_challenge.put()
+		return user_challenge
+
+	@ChallengeModel.query_method(query_fields=('challenger','challengee'),name='user.getChallenge',path='user/get/challenge')
+	def get_user_challenge(self, user_challenge_query):
+		return user_challenge_query
 
 APPLICATION = endpoints.api_server([CodegressApi])

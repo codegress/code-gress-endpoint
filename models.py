@@ -46,6 +46,13 @@ class Question(messages.Message):
 class Questions(messages.Message):
 	ques = messages.MessageField(Question, 1, repeated=True)
 
+class Follow(messages.Message):
+	follower = messages.StringField(1,required=True)
+	followee = messages.StringField(2,required=True)
+
+class Follows(messages.Message):
+	follows = messages.MessageField(Follow, 1, repeated=True)
+
 class AccountModel(ndb.Model):
 	username = ndb.StringProperty(required=True)
 	password = ndb.StringProperty(required=True)
@@ -78,22 +85,20 @@ class SubmissionModel(EndpointsModel):
 	submission_date = ndb.DateTimeProperty()
 	submitted_user = ndb.StringProperty(required=True)
 
-class ChallengeModel(ndb.Model):
+class ChallengeModel(EndpointsModel):
+	challenger = ndb.StringProperty(required=True)
+	challengee = ndb.StringProperty(required=True)
 	title = ndb.StringProperty(required=True)
-	description = ndb.StringProperty()
-	start_time = ndb.DateTimeProperty()
-	end_time = ndb.DateTimeProperty()
-	points = ndb.FloatProperty()
-
-class SolveModel(ndb.Model):
-	time_taken = ndb.DateTimeProperty(required=True)
+	description = ndb.StringProperty(required=True)
+	no_of_questions = ndb.IntegerProperty(required=True)
 	points = ndb.FloatProperty(required=True)
+	start_date = ndb.DateTimeProperty()
+	end_date= ndb.DateTimeProperty()
 
-class AcceptModel(ndb.Model):
-	solved = ndb.StructuredProperty(SolveModel)
+class UserChallengeModel(EndpointsModel):
+	challenge = ndb.StructuredProperty(ChallengeModel,required=True)
+	state = ndb.StringProperty(choices=['Accept','Reject'],required=True)
 
-class UserChallengerModel(ndb.Model):
-	challenge = ndb.StructuredProperty(ChallengeModel, required=True)
-	challenger = ndb.StructuredProperty(AccountModel, required=True)
-	challengee = ndb.StructuredProperty(AccountModel, required=True)
-	accept = ndb.StructuredProperty(AcceptModel)
+class FollowModel(ndb.Model):
+	follower = ndb.StringProperty()
+	followee = ndb.StringProperty()
