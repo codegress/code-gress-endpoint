@@ -47,11 +47,11 @@ class Questions(messages.Message):
 	ques = messages.MessageField(Question, 1, repeated=True)
 
 class Follow(messages.Message):
-	follower = messages.StringField(1,required=True)
-	followee = messages.StringField(2,required=True)
+	follower = messages.StringField(1)
+	followee = messages.StringField(2)
 
-class Follows(messages.Message):
-	follows = messages.MessageField(Follow, 1, repeated=True)
+class Follower(messages.Message):
+	names = messages.StringField(1,repeated=True)
 
 class AccountModel(ndb.Model):
 	username = ndb.StringProperty(required=True)
@@ -93,12 +93,12 @@ class ChallengeModel(EndpointsModel):
 	no_of_questions = ndb.IntegerProperty(required=True)
 	points = ndb.FloatProperty(required=True)
 	start_date = ndb.DateTimeProperty()
-	end_date= ndb.DateTimeProperty()
+	end_date = ndb.DateTimeProperty()
 
 class UserChallengeModel(EndpointsModel):
 	challenge = ndb.StructuredProperty(ChallengeModel,required=True)
 	state = ndb.StringProperty(choices=['Accept','Reject'],required=True)
 
 class FollowModel(ndb.Model):
-	follower = ndb.StringProperty()
-	followee = ndb.StringProperty()
+	follower = ndb.StringProperty(required=True)
+	followee = ndb.StringProperty(required=True)
