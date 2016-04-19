@@ -1,5 +1,5 @@
 import endpoints
- 
+ import re
 from models import Account
 from models import AccountModel 
 from models import Acknowledge
@@ -14,9 +14,13 @@ from models import TestCases
 from models import TestCaseModel
 from models import SignIn
 from models import SubmissionModel
+from models import ChallengeFeed
+from models import ChallengeFeedModel
+from models import CommentModel
 from protorpc import remote
 from hashlib import md5
 from datetime import datetime
+
 from google.appengine.ext import ndb
 
 @endpoints.api(name='codegress',version='v1')
@@ -118,6 +122,16 @@ class CodegressApi(remote.Service):
 			testcase_list.append(case)
 		return TestCases(cases=testcase_list)
 
+	@endpoints.method(Query, Acknowledge, name='user.shortListed', path='user/shortlist')
+	def get_shortlisted_users(self,request):
+		shortListed_users = []
+		accounts = AccountModel.query(AccountModel.username >= request.name).fetch()
+		for account in accounts:
+			matched = re.match(request.name, account.username , re.I)
+			if matched:
+				shortListed_users.append(account.username)
+		return Acknowledge(data=shortListed_users, status=True)
+
 	@SubmissionModel.method(request_fields=('ques_title','submission_text','submitted_user'),
 		name='submission.addSubmission',path='submission/add',http_method='POST')
 	def add_submission(self,submission):
@@ -128,5 +142,35 @@ class CodegressApi(remote.Service):
 	@SubmissionModel.query_method(query_fields=('ques_title','submitted_user'),name='submission.getSubmission',path='submission/get')
 	def get_submission(self, submission_query):
 		return submission_query
+
+	@endpoints.method(ChallengeFeed, Acknowledge, name='challenge.feed', path='challenge/feed')
+	def add_feed_challenges(self,request):
+		ques_title = request.ques_title
+		like = request.like
+		username = request.username
+		comment = request.comment
+		question = QuestionModel.query(QuestionModel.ques_title == ques_title).fetch()
+		account = AccountModel.query(AccountModel.username == request.username).fetch()
+		challenge_feed = ChallengeFeedModel.query(ChallengeFeedModel.ques == question).fetch()
+		ack = Acknowledge(status=False)
+
+		if not challenge_feed:
+			challenge_feed = ChallengeFeedModel(ChallengeFeedModel.ques = question)
+		else:
+			challenge_feed = challenge_feed[0]
+
+		if like:
+			likes = challenge_feed.likes
+			challenge_feed.likes = likes+[account]
+		if comment:
+			comments = CommentModel.query(CommentModel.username == username).fetch()
+			if comments:
+				com = comments.comment_message + [comment]
+				challenge_feed.comments = com
+			else:
+				challenge_feed.comments = [CommentModel(username=username,comment_message=comment)]
+		challenge_feed.put()
+		ack.status = True
+		return ack
 
 APPLICATION = endpoints.api_server([CodegressApi])

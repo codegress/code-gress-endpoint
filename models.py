@@ -46,6 +46,12 @@ class Question(messages.Message):
 class Questions(messages.Message):
 	ques = messages.MessageField(Question, 1, repeated=True)
 
+class ChallangeFeed(messages.Message):
+	ques_title = messages.StringField(1,required=True)
+	username = messages.StringField(2)
+	like = messages.BooleanField(3)
+	comment = messages.StringField(4)
+
 class AccountModel(ndb.Model):
 	username = ndb.StringProperty(required=True)
 	password = ndb.StringProperty(required=True)
@@ -97,3 +103,19 @@ class UserChallengerModel(ndb.Model):
 	challenger = ndb.StructuredProperty(AccountModel, required=True)
 	challengee = ndb.StructuredProperty(AccountModel, required=True)
 	accept = ndb.StructuredProperty(AcceptModel)
+
+class ChallengeFeedModel(ndb.Model):
+	ques =  ndb.StructuredProperty(QuestionModel,required=True) 
+	likes = ndb.StructuredProperty(AccountModel,repeated=True)
+	comments = ndb.StructuredProperty(CommentModel,repeated=True)
+
+class CommentModel(ndb.Model):
+	username = ndb.StructuredProperty(AccountModel,required=True)
+	datetime = ndb.DateTimeProperty()
+	comment_message = ndb.StringProperty(repeated=True)
+
+class ChallengingModel(ndb.Model):
+	ques = nbd.StructuredProperty(QuestionModel,required=True)
+	challenger = nbd.StructuredProperty(AccountModel,required=True)
+	challengee = nbd.StructuredProperty(AccountModel,required=True)
+	
