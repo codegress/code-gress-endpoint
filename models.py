@@ -46,11 +46,20 @@ class Question(messages.Message):
 class Questions(messages.Message):
 	ques = messages.MessageField(Question, 1, repeated=True)
 
+<<<<<<< HEAD
 class ChallangeFeed(messages.Message):
 	ques_title = messages.StringField(1,required=True)
 	username = messages.StringField(2)
 	like = messages.BooleanField(3)
 	comment = messages.StringField(4)
+=======
+class Follow(messages.Message):
+	follower = messages.StringField(1)
+	followee = messages.StringField(2)
+
+class Follower(messages.Message):
+	names = messages.StringField(1,repeated=True)
+>>>>>>> 598eccb7022dfd7ea9bd5d40e8f6e462ce43120d
 
 class AccountModel(ndb.Model):
 	username = ndb.StringProperty(required=True)
@@ -84,20 +93,21 @@ class SubmissionModel(EndpointsModel):
 	submission_date = ndb.DateTimeProperty()
 	submitted_user = ndb.StringProperty(required=True)
 
-class ChallengeModel(ndb.Model):
+class ChallengeModel(EndpointsModel):
+	challenger = ndb.StringProperty(required=True)
+	challengee = ndb.StringProperty(required=True)
 	title = ndb.StringProperty(required=True)
-	description = ndb.StringProperty()
-	start_time = ndb.DateTimeProperty()
-	end_time = ndb.DateTimeProperty()
-	points = ndb.FloatProperty()
-
-class SolveModel(ndb.Model):
-	time_taken = ndb.DateTimeProperty(required=True)
+	description = ndb.StringProperty(required=True)
+	no_of_questions = ndb.IntegerProperty(required=True)
 	points = ndb.FloatProperty(required=True)
+	start_date = ndb.DateTimeProperty()
+	end_date = ndb.DateTimeProperty()
 
-class AcceptModel(ndb.Model):
-	solved = ndb.StructuredProperty(SolveModel)
+class UserChallengeModel(EndpointsModel):
+	challenge = ndb.StructuredProperty(ChallengeModel,required=True)
+	state = ndb.StringProperty(choices=['Accept','Reject'],required=True)
 
+<<<<<<< HEAD
 class UserChallengerModel(ndb.Model):
 	challenge = ndb.StructuredProperty(ChallengeModel, required=True)
 	challenger = ndb.StructuredProperty(AccountModel, required=True)
@@ -119,3 +129,8 @@ class ChallengingModel(ndb.Model):
 	challenger = nbd.StructuredProperty(AccountModel,required=True)
 	challengee = nbd.StructuredProperty(AccountModel,required=True)
 	
+=======
+class FollowModel(ndb.Model):
+	follower = ndb.StringProperty(required=True)
+	followee = ndb.StringProperty(required=True)
+>>>>>>> 598eccb7022dfd7ea9bd5d40e8f6e462ce43120d
