@@ -46,20 +46,21 @@ class Question(messages.Message):
 class Questions(messages.Message):
 	ques = messages.MessageField(Question, 1, repeated=True)
 
-<<<<<<< HEAD
-class ChallangeFeed(messages.Message):
+class ChallengeFeed(messages.Message):
 	ques_title = messages.StringField(1,required=True)
 	username = messages.StringField(2)
-	like = messages.BooleanField(3)
+	like = messages.StringField(3,repeated=True)
 	comment = messages.StringField(4)
-=======
+
+class ChallengeFeeds(messages.Message):
+	feeds = messages.MessageField(ChallengeFeed,1,repeated=True)
+
 class Follow(messages.Message):
 	follower = messages.StringField(1)
 	followee = messages.StringField(2)
 
 class Follower(messages.Message):
 	names = messages.StringField(1,repeated=True)
->>>>>>> 598eccb7022dfd7ea9bd5d40e8f6e462ce43120d
 
 class AccountModel(ndb.Model):
 	username = ndb.StringProperty(required=True)
@@ -78,7 +79,7 @@ class LanguageModel(EndpointsModel):
 
 class QuestionModel(ndb.Model):
 	title = ndb.StringProperty(required=True)
-	text = ndb.StringProperty(required=True, indexed=False)
+	text = ndb.StringProperty(required=True)
 	domain = ndb.StringProperty(required=True)
 	
 class TestCaseModel(ndb.Model):
@@ -107,30 +108,27 @@ class UserChallengeModel(EndpointsModel):
 	challenge = ndb.StructuredProperty(ChallengeModel,required=True)
 	state = ndb.StringProperty(choices=['Accept','Reject'],required=True)
 
-<<<<<<< HEAD
 class UserChallengerModel(ndb.Model):
 	challenge = ndb.StructuredProperty(ChallengeModel, required=True)
 	challenger = ndb.StructuredProperty(AccountModel, required=True)
 	challengee = ndb.StructuredProperty(AccountModel, required=True)
-	accept = ndb.StructuredProperty(AcceptModel)
 
-class ChallengeFeedModel(ndb.Model):
-	ques =  ndb.StructuredProperty(QuestionModel,required=True) 
-	likes = ndb.StructuredProperty(AccountModel,repeated=True)
-	comments = ndb.StructuredProperty(CommentModel,repeated=True)
+class CommentModel(EndpointsModel):
+	_message_fields_schema = ('username', 'comment_message')
+	username = ndb.StringProperty()
+	datetime = ndb.DateTimeProperty(auto_now=True)
+	comment_message = ndb.StringProperty()
 
-class CommentModel(ndb.Model):
-	username = ndb.StructuredProperty(AccountModel,required=True)
-	datetime = ndb.DateTimeProperty()
-	comment_message = ndb.StringProperty(repeated=True)
+class ChallengeFeedModel(EndpointsModel):
+	ques_title =  ndb.StringProperty() 
+	likes = ndb.StringProperty(repeated=True)
+	comments = ndb.StructuredProperty(CommentModel, repeated=True)
 
 class ChallengingModel(ndb.Model):
-	ques = nbd.StructuredProperty(QuestionModel,required=True)
-	challenger = nbd.StructuredProperty(AccountModel,required=True)
-	challengee = nbd.StructuredProperty(AccountModel,required=True)
+	ques = ndb.StructuredProperty(QuestionModel, required=True)
+	challenger = ndb.StructuredProperty(AccountModel, required=True)
+	challengee = ndb.StructuredProperty(AccountModel, required=True)
 	
-=======
 class FollowModel(ndb.Model):
 	follower = ndb.StringProperty(required=True)
 	followee = ndb.StringProperty(required=True)
->>>>>>> 598eccb7022dfd7ea9bd5d40e8f6e462ce43120d

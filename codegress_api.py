@@ -1,9 +1,5 @@
 import endpoints
-<<<<<<< HEAD
- import re
-=======
-import re  
->>>>>>> 598eccb7022dfd7ea9bd5d40e8f6e462ce43120d
+import re
 from models import Account
 from models import AccountModel 
 from models import Acknowledge
@@ -18,17 +14,15 @@ from models import TestCases
 from models import TestCaseModel
 from models import SignIn
 from models import SubmissionModel
-<<<<<<< HEAD
 from models import ChallengeFeed
+from models import ChallengeFeeds
 from models import ChallengeFeedModel
 from models import CommentModel
-=======
 from models import ChallengeModel
 from models import UserChallengeModel
 from models import FollowModel
 from models import Follow
 from models import Follower
->>>>>>> 598eccb7022dfd7ea9bd5d40e8f6e462ce43120d
 from protorpc import remote
 from hashlib import md5
 from datetime import datetime
@@ -139,13 +133,7 @@ class CodegressApi(remote.Service):
 		shortListed_users = []
 		accounts = AccountModel.query(AccountModel.username >= request.name).fetch()
 		for account in accounts:
-<<<<<<< HEAD
 			matched = re.match(request.name, account.username , re.I)
-			if matched:
-				shortListed_users.append(account.username)
-		return Acknowledge(data=shortListed_users, status=True)
-=======
-			matched = re.match(request.name, account.username, re.I)
 			if matched:
 				shortListed_users.append(account.username)
 		return Acknowledge(data=shortListed_users, status=True)
@@ -184,13 +172,12 @@ class CodegressApi(remote.Service):
 		followee = AccountModel.query(AccountModel.username == request.name).fetch()
 		followers = Follower()
 		if followee:
-			follow_query = FollowModel.query(FollowModel.follower==request.name).fetch()
+			follow_query = FollowModel.query(FollowModel.follower == request.name).fetch()
 			follow_list = []
 			for follow in follow_query:
 				follow_list += [follow.followee]
 			followers.names = follow_list
 		return followers
->>>>>>> 598eccb7022dfd7ea9bd5d40e8f6e462ce43120d
 
 	@SubmissionModel.method(request_fields=('ques_title','submission_text','submitted_user'),
 		name='submission.addSubmission',path='submission/add',http_method='POST')
@@ -203,37 +190,44 @@ class CodegressApi(remote.Service):
 	def get_submission(self,submission_query):
 		return submission_query
 
-<<<<<<< HEAD
-	@endpoints.method(ChallengeFeed, Acknowledge, name='challenge.feed', path='challenge/feed')
-	def add_feed_challenges(self,request):
-		ques_title = request.ques_title
-		like = request.like
-		username = request.username
-		comment = request.comment
-		question = QuestionModel.query(QuestionModel.ques_title == ques_title).fetch()
-		account = AccountModel.query(AccountModel.username == request.username).fetch()
-		challenge_feed = ChallengeFeedModel.query(ChallengeFeedModel.ques == question).fetch()
-		ack = Acknowledge(status=False)
+	@ChallengeFeedModel.method(name='challenge.addFeed', path='challenge/add/feed')
+	def add_feed_challenges(self, challenge_feed):
+		request_user = None
+		if challenge_feed.likes:
+			request_user = challenge_feed.likes[0]
+		if not request_user:
+			request_user = challenge_feed.comments[0].username
 
-		if not challenge_feed:
-			challenge_feed = ChallengeFeedModel(ChallengeFeedModel.ques = question)
+		question = QuestionModel.query(QuestionModel.title == challenge_feed.ques_title).fetch()
+		account = AccountModel.query(AccountModel.username == request_user).fetch()
+		feed = None
+		if question and account:
+			feed = ChallengeFeedModel.query(ChallengeFeedModel.ques_title == challenge_feed.ques_title).fetch()
+
+		if feed:
+			user = account[0].username
+			if feed[0].likes and challenge_feed.likes:
+				feed[0].likes += [user]
+			if challenge_feed.comments:
+				feed_comment = challenge_feed.comments[0]
+				feed_comment.datatime = datetime.now()
+				feed[0].comments += [feed_comment]
+			feed[0].put()
 		else:
-			challenge_feed = challenge_feed[0]
+			challenge_feed.comments[0].datetime = datetime.now()
+			challenge_feed.put()
+		return challenge_feed
 
-		if like:
-			likes = challenge_feed.likes
-			challenge_feed.likes = likes+[account]
-		if comment:
-			comments = CommentModel.query(CommentModel.username == username).fetch()
-			if comments:
-				com = comments.comment_message + [comment]
-				challenge_feed.comments = com
-			else:
-				challenge_feed.comments = [CommentModel(username=username,comment_message=comment)]
-		challenge_feed.put()
-		ack.status = True
-		return ack
-=======
+	# @endpoints.method(Query, ChallengeFeeds, name='challenge.getFeeds',path='challenge/get/feeds')
+	# def get_feed_challenges(self,request):
+	# 	request_user = request.name
+	# 	account = AccountModel.query(AccountModel.username == request_user).fetch()
+	# 	if account:
+	# 		feeds = ChallengeFeedModel.query(ChallengeFeedModel.username == request_user).fetch()
+	# 		challenge_feeds = []
+	# 		for feed in feeds:
+	# 			challenge_feed = ChallengeFeed(ques_title=feed.ques_title,username=request_user,like=feed.like)
+
 	@UserChallengeModel.method(name='user.addChallenge',path='user/add/challenge')
 	def add_user_challenge(self, user_challenge):
 		user_challenge.challenge.start_date = datetime.now()
@@ -243,6 +237,5 @@ class CodegressApi(remote.Service):
 	@ChallengeModel.query_method(query_fields=('challenger','challengee'),name='user.getChallenge',path='user/get/challenge')
 	def get_user_challenge(self, user_challenge_query):
 		return user_challenge_query
->>>>>>> 598eccb7022dfd7ea9bd5d40e8f6e462ce43120d
 
 APPLICATION = endpoints.api_server([CodegressApi])
