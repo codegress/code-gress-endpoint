@@ -14,9 +14,7 @@ from models import TestCases
 from models import TestCaseModel
 from models import SignIn
 from models import SubmissionModel
-from models import ChallengeFeed
-from models import ChallengeFeeds
-from models import ChallengeFeedModel
+from models import LikeModel
 from models import CommentModel
 from models import ChallengeModel
 from models import UserChallengeModel
@@ -190,44 +188,29 @@ class CodegressApi(remote.Service):
 	def get_submission(self,submission_query):
 		return submission_query
 
-	@ChallengeFeedModel.method(name='challenge.addFeed', path='challenge/add/feed')
-	def add_feed_challenges(self, challenge_feed):
-		request_user = None
-		if challenge_feed.likes:
-			request_user = challenge_feed.likes[0]
-		if not request_user:
-			request_user = challenge_feed.comments[0].username
+	@LikeModel.method(name='challenge.addLike', path='challenge/add/like')
+	def add_like(self, like_instance):
+		already_liked = LikeModel.query(LikeModel.like == like_instance.like).fetch()
+		if not already_liked:
+			like_instance.parent = ndb.Key(LikeModel, like_instance.ques_title)
+			like_instance.put()
+		return like_instance
 
-		question = QuestionModel.query(QuestionModel.title == challenge_feed.ques_title).fetch()
-		account = AccountModel.query(AccountModel.username == request_user).fetch()
-		feed = None
-		if question and account:
-			feed = ChallengeFeedModel.query(ChallengeFeedModel.ques_title == challenge_feed.ques_title).fetch()
+	@CommentModel.method(name='challenge.addComment',path='challenge/add/comment')
+	def add_comment(self, comment_instance):
+		comment_instance.parent = ndb.Key(CommentModel, comment_instance.ques_title)
+		comment_instance.datetime = datetime.now()
+		comment_instance.put()
+		return comment_instance
 
-		if feed:
-			user = account[0].username
-			if feed[0].likes and challenge_feed.likes:
-				feed[0].likes += [user]
-			if challenge_feed.comments:
-				feed_comment = challenge_feed.comments[0]
-				feed_comment.datatime = datetime.now()
-				feed[0].comments += [feed_comment]
-			feed[0].put()
-		else:
-			challenge_feed.comments[0].datetime = datetime.now()
-			challenge_feed.put()
-		return challenge_feed
+	@LikeModel.query_method(query_fields=('ques_title',),name='challenge.getLikes',path='challenge/get/likes')
+	def get_likes(self,like_query):
+		return like_query
 
-	# @endpoints.method(Query, ChallengeFeeds, name='challenge.getFeeds',path='challenge/get/feeds')
-	# def get_feed_challenges(self,request):
-	# 	request_user = request.name
-	# 	account = AccountModel.query(AccountModel.username == request_user).fetch()
-	# 	if account:
-	# 		feeds = ChallengeFeedModel.query(ChallengeFeedModel.username == request_user).fetch()
-	# 		challenge_feeds = []
-	# 		for feed in feeds:
-	# 			challenge_feed = ChallengeFeed(ques_title=feed.ques_title,username=request_user,like=feed.like)
-
+	@CommentModel.query_method(query_fields=('ques_title',),name='challenge.getComments',path='challenge/get/comments')
+	def get_comments(self, comment_query):
+		return comment_query
+	
 	@UserChallengeModel.method(name='user.addChallenge',path='user/add/challenge')
 	def add_user_challenge(self, user_challenge):
 		user_challenge.challenge.start_date = datetime.now()

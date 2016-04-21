@@ -49,7 +49,7 @@ class Questions(messages.Message):
 class ChallengeFeed(messages.Message):
 	ques_title = messages.StringField(1,required=True)
 	username = messages.StringField(2)
-	like = messages.StringField(3,repeated=True)
+	like = messages.BooleanField(3)
 	comment = messages.StringField(4)
 
 class ChallengeFeeds(messages.Message):
@@ -114,15 +114,14 @@ class UserChallengerModel(ndb.Model):
 	challengee = ndb.StructuredProperty(AccountModel, required=True)
 
 class CommentModel(EndpointsModel):
-	_message_fields_schema = ('username', 'comment_message')
+	ques_title = ndb.StringProperty()
 	username = ndb.StringProperty()
 	datetime = ndb.DateTimeProperty(auto_now=True)
 	comment_message = ndb.StringProperty()
 
-class ChallengeFeedModel(EndpointsModel):
+class LikeModel(EndpointsModel):
 	ques_title =  ndb.StringProperty() 
-	likes = ndb.StringProperty(repeated=True)
-	comments = ndb.StructuredProperty(CommentModel, repeated=True)
+	like = ndb.StringProperty()
 
 class ChallengingModel(ndb.Model):
 	ques = ndb.StructuredProperty(QuestionModel, required=True)
