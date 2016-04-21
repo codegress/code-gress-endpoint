@@ -190,10 +190,14 @@ class CodegressApi(remote.Service):
 
 	@LikeModel.method(name='challenge.addLike', path='challenge/add/like')
 	def add_like(self, like_instance):
-		already_liked = LikeModel.query(LikeModel.like == like_instance.like).fetch()
+		already_liked = LikeModel.query(LikeModel.username == like_instance.username,LikeModel.ques_title == like_instance.ques_title).fetch()
 		if not already_liked:
 			like_instance.parent = ndb.Key(LikeModel, like_instance.ques_title)
 			like_instance.put()
+		else:
+			already_liked[0].like = (not already_liked[0].like)
+			already_liked[0].put()
+			like_instance = already_liked[0]
 		return like_instance
 
 	@CommentModel.method(name='challenge.addComment',path='challenge/add/comment')

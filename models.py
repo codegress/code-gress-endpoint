@@ -121,7 +121,8 @@ class CommentModel(EndpointsModel):
 
 class LikeModel(EndpointsModel):
 	ques_title =  ndb.StringProperty() 
-	like = ndb.StringProperty()
+	username = ndb.StringProperty()
+	like = ndb.BooleanProperty()
 
 class ChallengingModel(ndb.Model):
 	ques = ndb.StructuredProperty(QuestionModel, required=True)
