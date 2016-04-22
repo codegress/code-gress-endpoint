@@ -13,11 +13,9 @@ from models import TestCase
 from models import TestCases
 from models import TestCaseModel
 from models import SignIn
-from models import SubmissionModel
 from models import LikeModel
 from models import CommentModel
 from models import ChallengeModel
-from models import UserChallengeModel
 from models import FollowModel
 from models import Follow
 from models import Follower
@@ -129,11 +127,14 @@ class CodegressApi(remote.Service):
 	@endpoints.method(Query, Acknowledge, name='user.shortListed', path='user/shortlist')
 	def get_shortlisted_users(self,request):
 		shortListed_users = []
-		accounts = AccountModel.query(AccountModel.username >= request.name).fetch()
-		for account in accounts:
-			matched = re.match(request.name, account.username , re.I)
-			if matched:
-				shortListed_users.append(account.username)
+		accounts = AccountModel.query(AccountModel.username == request.name).fetch()
+		if not accounts:
+			accounts = AccountModel.query(AccountModel.username >= request.name).fetch()
+			for account in accounts:
+				if re.match(request.name, account.username , re.I):
+					shortListed_users.append(account.username)
+		else:
+			shortListed_users.append(accounts[0].username)
 		return Acknowledge(data=shortListed_users, status=True)
 	
 	@endpoints.method(Follow, Follow,name='user.follow',path='user/follow')
@@ -177,16 +178,16 @@ class CodegressApi(remote.Service):
 			followers.names = follow_list
 		return followers
 
-	@SubmissionModel.method(request_fields=('ques_title','submission_text','submitted_user'),
-		name='submission.addSubmission',path='submission/add',http_method='POST')
-	def add_submission(self,submission):
-		submission.submission_date = datetime.now()
-		submission.put()
-		return submission
+	# @SubmissionModel.method(request_fields=('ques_title','submission_text','submitted_user'),
+	# 	name='submission.addSubmission',path='submission/add',http_method='POST')
+	# def add_submission(self,submission):
+	# 	submission.submission_date = datetime.now()
+	# 	submission.put()
+	# 	return submission
 	
-	@SubmissionModel.query_method(query_fields=('ques_title','submitted_user'),name='submission.getSubmission',path='submission/get')
-	def get_submission(self,submission_query):
-		return submission_query
+	# @SubmissionModel.query_method(query_fields=('ques_title','submitted_user'),name='submission.getSubmission',path='submission/get')
+	# def get_submission(self,submission_query):
+	# 	return submission_query
 
 	@LikeModel.method(name='challenge.addLike', path='challenge/add/like')
 	def add_like(self, like_instance):
@@ -214,15 +215,25 @@ class CodegressApi(remote.Service):
 	@CommentModel.query_method(query_fields=('ques_title',),name='challenge.getComments',path='challenge/get/comments')
 	def get_comments(self, comment_query):
 		return comment_query
-	
-	@UserChallengeModel.method(name='user.addChallenge',path='user/add/challenge')
-	def add_user_challenge(self, user_challenge):
-		user_challenge.challenge.start_date = datetime.now()
-		user_challenge.put()
-		return user_challenge
 
-	@ChallengeModel.query_method(query_fields=('challenger','challengee'),name='user.getChallenge',path='user/get/challenge')
-	def get_user_challenge(self, user_challenge_query):
-		return user_challenge_query
+	@ChallengeModel.method(name='challenge.addChallenge',path='challenge/add')
+	def add_challenge(self, challenge_instance):
+		already_challenged = ChallengeModel.query(ChallengeModel.ques_title == challenge_instance.ques_title, 
+			ChallengeModel.challenger == challenge_instance.challenger, ChallengeModel.challengee == challenge_instance.challengee).fetch()
+		if not already_challenged:
+			challenge_instance.datetime = datetime.now()
+			challenge_instance.seen = False
+			challenge_instance.accepted = False
+			challenge_instance.solved = False
+			challenge_instance.put()
+		return challenge_instance
+
+	@ChallengeModel.query_method(query_fields=('challenger',),name='challenge.getChallenged',path='challenge/get/challenged')
+	def get_challenged_challenges(self, challenge_query):
+		return challenge_query
+
+	@ChallengeModel.query_method(query_fields=('challengee',),name='challenge.getChallenges',path='challenge/get/challenges')
+	def get_challenges(self, challenge_query):
+		return challenge_query
 
 APPLICATION = endpoints.api_server([CodegressApi])
