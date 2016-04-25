@@ -13,9 +13,9 @@ from models import TestCase
 from models import TestCases
 from models import TestCaseModel
 from models import SignIn
-from models import LikeModel
-from models import CommentModel
+from models import CommentModel 
 from models import ChallengeModel
+from models import ChallengeFeedModel
 from models import FollowModel
 from models import Follow
 from models import Follower
@@ -76,35 +76,53 @@ class CodegressApi(remote.Service):
 	def get_lang(self, language_query):
 		return language_query
 
-	@endpoints.method(Question, Acknowledge, name='question.addQuestion', path='question/add', http_method='POST')
-	def add_question(self, request):
-		ack = Acknowledge(status=False)
-		domain_key = ndb.Key('Domain', request.domain)
-		ques_key = ndb.Key(QuestionModel, request.title, parent=domain_key)
-		ques = QuestionModel.query(ancestor=ques_key).fetch()
+	@QuestionModel.method(name='question.addQuestion', path='question/add', http_method='POST')
+	def add_question(self, question_instance):
+		domain_key = ndb.Key('Domain', question_instance.domain)
+		ques_key = ndb.Key(QuestionModel, question_instance.title, parent=domain_key)
+		ques = QuestionModel.query(QuestionModel.domain == question_instance.domain, QuestionModel.title==question_instance.title).fetch()
 		if not ques:
-			ques = QuestionModel(parent=ques_key, title=request.title, text=request.text, domain=request.domain)
-			ques.put()
-			ack.status = True
-		return ack
-
-	@endpoints.method(Query, Questions, name='question.getQuestion', path='question/get')
-	def get_question(self,request):
-		ancestor_key = None
-		if request.domain:
-			ancestor_key = ndb.Key('Domain', request.domain)
-			if request.name:
-				ancestor_key = ndb.Key(QuestionModel, request.name, parent=ancestor_key)
-			ques_query = QuestionModel.query(ancestor=ancestor_key).fetch()
+			question_instance.parent = ques_key
+			question_instance.put()
 		else:
-			ques_query = QuestionModel.query().fetch()
-		ques_list = []
-		for q in ques_query:
-			ques = Question(title=q.title, text=q.text, domain=q.domain)
-			ques_list += [ques]
-		return Questions(ques=ques_list)
+			question_instance = ques[0]
+		return question_instance 
 
-	@endpoints.method(TestCase, Acknowledge, name='testcase.addTestcase',path='testcase/add',http_method='POST')
+	@QuestionModel.method(request_fields=('title','domain','likes'),name='question.addQuestionLike', path='question/like/add')
+	def add_question_like(self, question_instance):
+		ques = QuestionModel.query(QuestionModel.domain == question_instance.domain, QuestionModel.title==question_instance.title).fetch()
+		if ques:
+			likes = ques[0].likes
+			for username in likes.username:
+				if username == question_instance.likes.username:
+					return question_instance
+			if likes:
+				ques[0].likes += question_instance.likes
+			else:
+				ques[0].likes = question_instance.likes
+			ques[0].put()
+		return question_instance
+	
+	@QuestionModel.method(request_fields=('title','domain','comments'),name='question.addQuestionComment', path='question/comment/add')
+	def add_question_comment(self, question_instance):
+		ques = QuestionModel.query(QuestionModel.domain == question_instance.domain, QuestionModel.title==question_instance.title).fetch()
+		if ques:
+			if ques[0].comments:
+				ques[0].comments += question_instance.comments
+			else:
+				ques[0].comments = question_instance.comments
+			ques[0].put()
+		return question_instance
+
+	@QuestionModel.query_method(query_fields=('domain',),name='question.getDomain', path='domain/get')
+	def get_domain_question(self, domain_query):
+		return domain_query
+
+	@QuestionModel.query_method(query_fields=('title',),name='question.getQuestion', path='question/get')
+	def get_question(self, question_query):
+		return question_query
+
+	@endpoints.method(TestCase, Acknowledge, name='testcase.addTestcase',path='testcase/add')
 	def add_testcase(self, request):
 		testcase_key = ndb.Key(TestCaseModel,request.ques_title)
 		testcase = TestCaseModel(parent=testcase_key, test_in=request.test_in, test_out=request.test_out, 
@@ -189,32 +207,26 @@ class CodegressApi(remote.Service):
 	# def get_submission(self,submission_query):
 	# 	return submission_query
 
-	@LikeModel.method(name='challenge.addLike', path='challenge/add/like')
-	def add_like(self, like_instance):
-		already_liked = LikeModel.query(LikeModel.username == like_instance.username,LikeModel.ques_title == like_instance.ques_title).fetch()
-		if not already_liked:
-			like_instance.parent = ndb.Key(LikeModel, like_instance.ques_title)
-			like_instance.put()
-		else:
-			already_liked[0].like = (not already_liked[0].like)
-			already_liked[0].put()
-			like_instance = already_liked[0]
-		return like_instance
+	# @ChallengeFeedModel.method(name='challenge.addChallengeFeed',path='challenge/add/challengefeed')
+	# def add_challenge_feed(self, challenge_feed_instance):
+	# 	ques_key = ndb.Key(QuestionModel, challenge_feed_instance.ques_title)
+	# 	user_key = ndb.Key(AccountModel, challenge_feed_instance.username, parent=ques_key)
+	# 	existing_challenge_feed = ChallengeFeedModel.query(ChallengeFeedModel.ques_title == challenge_feed_instance.ques_title, 
+	# 							ChallengeFeedModel.username == challenge_feed_instance.username).fetch()
+	# 	if existing_challenge_feed:
+	# 		if existing_challenge_feed[0].comment:
+	# 			existing_challenge_feed[0].comment.append(challenge_feed_instance.comment)
+	# 		else:
+	# 			existing_challenge_feed[0].comment = challenge_feed_instance.comment
+	# 		existing_challenge_feed[0].like = challenge_feed_instance.like
+	# 		existing_challenge_feed[0].put()
+	# 	else:
+	# 		ques_key = ndb.Key(QuestionModel, challenge_feed_instance.ques_title)
+	# 		user_key = ndb.Key(AccountModel, challenge_feed_instance.username, parent=ques_key)
+	# 		challenge_feed_instance.parent = user_key
+	# 		challenge_feed_instance.put()
+	# 	return challenge_feed_instance
 
-	@CommentModel.method(name='challenge.addComment',path='challenge/add/comment')
-	def add_comment(self, comment_instance):
-		comment_instance.parent = ndb.Key(CommentModel, comment_instance.ques_title)
-		comment_instance.datetime = datetime.now()
-		comment_instance.put()
-		return comment_instance
-
-	@LikeModel.query_method(query_fields=('ques_title',),name='challenge.getLikes',path='challenge/get/likes')
-	def get_likes(self,like_query):
-		return like_query
-
-	@CommentModel.query_method(query_fields=('ques_title',),name='challenge.getComments',path='challenge/get/comments')
-	def get_comments(self, comment_query):
-		return comment_query
 
 	@ChallengeModel.method(name='challenge.addChallenge',path='challenge/add')
 	def add_challenge(self, challenge_instance):
@@ -222,6 +234,7 @@ class CodegressApi(remote.Service):
 			ChallengeModel.challenger == challenge_instance.challenger, ChallengeModel.challengee == challenge_instance.challengee).fetch()
 		if not already_challenged:
 			challenge_instance.datetime = datetime.now()
+			challenge_instance.parent = ndb.Key(ChallengeModel, challenge_instance.ques_title)
 			challenge_instance.seen = False
 			challenge_instance.accepted = False
 			challenge_instance.solved = False

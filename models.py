@@ -6,7 +6,7 @@ from endpoints_proto_datastore.ndb import EndpointsModel
 class Account(messages.Message):
 	username = messages.StringField(1,required=True) 
 	password = messages.StringField(2,required=True)
-	email = messages.StringField(3,required=True)
+	email = messages.StringField(3,required=True) 
 
 class SignIn(messages.Message):
 	email = messages.StringField(1,required=True)
@@ -42,13 +42,12 @@ class Question(messages.Message):
 	title = messages.StringField(1, required=True)
 	text = messages.StringField(2, required=True)
 	domain = messages.StringField(3, required=True)
-	likes = messages.IntegerField(4)
 
 class Questions(messages.Message):
 	ques = messages.MessageField(Question, 1, repeated=True)
 
 class ChallengeFeed(messages.Message):
-	ques_title = messages.StringField(1,required=True)
+	ques_title = messages.StringField(1, required=True)
 	username = messages.StringField(2)
 	like = messages.BooleanField(3)
 	comment = messages.StringField(4)
@@ -78,10 +77,21 @@ class LanguageModel(EndpointsModel):
 	execute = ndb.StringProperty() 
 	placeholder = ndb.StringProperty()
 
-class QuestionModel(ndb.Model):
+class CommentModel(EndpointsModel):
+	username = ndb.StringProperty(required=True)
+	datetime = ndb.DateTimeProperty(auto_now=True)
+	comment_message = ndb.StringProperty(required=True)
+
+class LikeModel(EndpointsModel):
+	username = ndb.StringProperty(required=True)
+	liked = ndb.BooleanProperty(required=True)
+
+class QuestionModel(EndpointsModel):
 	title = ndb.StringProperty(required=True)
-	text = ndb.StringProperty(required=True)
+	text = ndb.StringProperty()
 	domain = ndb.StringProperty(required=True)
+	likes = ndb.StructuredProperty(LikeModel, repeated=True)
+	comments = ndb.StructuredProperty(CommentModel, repeated=True)
 	
 class TestCaseModel(ndb.Model):
 	test_in = ndb.StringProperty(required=True)
@@ -117,11 +127,7 @@ class ChallengeFeedModel(EndpointsModel):
 	ques_title = ndb.StringProperty()
 	username = ndb.StringProperty()
 	like = ndb.BooleanProperty()
-	comment = ndb.StructuredProperty(CommentModel, repeated=True)
-
-class CommentModel(EndpointsModel):
-	datetime = ndb.DateTimeProperty(auto_now=True)
-	comment_message = ndb.StringProperty()
+	comment = ndb.StructuredProperty(CommentModel,repeated=True)
 	
 class FollowModel(ndb.Model):
 	follower = ndb.StringProperty(required=True)
