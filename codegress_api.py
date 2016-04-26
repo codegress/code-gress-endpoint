@@ -93,8 +93,8 @@ class CodegressApi(remote.Service):
 		ques = QuestionModel.query(QuestionModel.domain == question_instance.domain, QuestionModel.title==question_instance.title).fetch()
 		if ques:
 			likes = ques[0].likes
-			for username in likes.username:
-				if username == question_instance.likes.username:
+			for like in likes:
+				if like.username == question_instance.likes[0].username:
 					return question_instance
 			if likes:
 				ques[0].likes += question_instance.likes
@@ -230,11 +230,12 @@ class CodegressApi(remote.Service):
 
 	@ChallengeModel.method(name='challenge.addChallenge',path='challenge/add')
 	def add_challenge(self, challenge_instance):
-		already_challenged = ChallengeModel.query(ChallengeModel.ques_title == challenge_instance.ques_title, 
-			ChallengeModel.challenger == challenge_instance.challenger, ChallengeModel.challengee == challenge_instance.challengee).fetch()
+		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
+		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
+							ChallengeModel.challengee == challenge_instance.challengee).fetch()
 		if not already_challenged:
 			challenge_instance.datetime = datetime.now()
-			challenge_instance.parent = ndb.Key(ChallengeModel, challenge_instance.ques_title)
+			challenge_instance.parent = ndb.Key(ChallengeModel, challenge_instance.ques.title)
 			challenge_instance.seen = False
 			challenge_instance.accepted = False
 			challenge_instance.solved = False

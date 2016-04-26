@@ -106,7 +106,7 @@ class TestCaseModel(ndb.Model):
 # 	submitted_user = ndb.StringProperty(required=True)
 
 class ChallengeModel(EndpointsModel):
-	ques_title = ndb.StringProperty(required=True)
+	ques = ndb.StructuredProperty(QuestionModel, required=True)
 	challenger = ndb.StringProperty(required=True)
 	challengee = ndb.StringProperty(required=True)
 	datetime = ndb.DateTimeProperty()
