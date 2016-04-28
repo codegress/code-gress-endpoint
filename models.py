@@ -99,11 +99,18 @@ class TestCaseModel(ndb.Model):
 	points = ndb.FloatProperty(required=True)
 	ques_title = ndb.StringProperty(required=True)
 
+
 # class SubmissionModel(EndpointsModel):
 # 	ques_title = ndb.StringProperty(required=True)
 # 	submission_text = ndb.TextProperty()
 # 	submission_date = ndb.DateTimeProperty()
 # 	submitted_user = ndb.StringProperty(required=True)
+
+class MessagesModel(EndpointsModel):
+	message = ndb.StringProperty(required=True)
+	datetime = ndb.DateTimeProperty()
+	frm = ndb.StringProperty(required=True)
+	to = ndb.StringProperty(required=True)
 
 class ChallengeModel(EndpointsModel):
 	ques = ndb.StructuredProperty(QuestionModel, required=True)
@@ -113,6 +120,7 @@ class ChallengeModel(EndpointsModel):
 	seen = ndb.BooleanProperty()
 	accepted = ndb.BooleanProperty()
 	solved = ndb.BooleanProperty()
+	rejected = ndb.BooleanProperty()
 
 # class UserChallengeModel(EndpointsModel):
 # 	challenge = ndb.StructuredProperty(ChallengeModel,required=True)

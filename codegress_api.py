@@ -239,8 +239,56 @@ class CodegressApi(remote.Service):
 			challenge_instance.seen = False
 			challenge_instance.accepted = False
 			challenge_instance.solved = False
+			challenge_instance.rejected = False
 			challenge_instance.put()
 		return challenge_instance
+
+	@ChallengeModel.method(name='challenge.solved', path='challenge/solved')
+	def solved_challenge(self, challenge_instance):
+		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
+		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
+							ChallengeModel.challengee == challenge_instance.challengee).fetch() 
+		if already_challenged:
+			if not already_challenged[0].solved:
+				already_challenged[0].seen = True
+				already_challenged[0].accepted = True
+				already_challenged[0].put()
+				# already_challenged[0].solved = True
+		return already_challenged[0]
+
+	@ChallengeModel.method(name='challenge.accepted',path='challenge/accepted')
+	def accepted_challenge(self, challenge_instance):
+		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
+		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
+							ChallengeModel.challengee == challenge_instance.challengee).fetch()
+		if already_challenged:
+			if not already_challenged[0].accepted:
+				already_challenged[0].accepted = True
+				already_challenged[0].put()
+		return already_challenged[0]
+
+	@ChallengeModel.method(name='challenge.seen',path='challenge/seen')
+	def seen_challenge(self, challenge_instance):
+		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
+		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
+							ChallengeModel.challengee == challenge_instance.challengee).fetch()
+		if already_challenged:
+			if not already_challenged[0].seen:
+				already_challenged[0].seen = True
+				already_challenged[0].put()
+		return already_challenged[0]
+
+	@ChallengeModel.method(name='challenge.rejected', path='challenge/rejected')
+	def rejected_challenge(self, challenge_instance):
+		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
+		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
+							ChallengeModel.challengee == challenge_instance.challengee).fetch()
+		if already_challenged:
+			if not already_challenged[0].rejected:
+				already_challenged[0].rejected = True
+				already_challenged[0].put()
+		return already_challenged[0]
+
 
 	@ChallengeModel.query_method(query_fields=('challenger',),name='challenge.getChallenged',path='challenge/get/challenged')
 	def get_challenged_challenges(self, challenge_query):
