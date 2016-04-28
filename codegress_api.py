@@ -1,8 +1,9 @@
 import endpoints
+from google.appengine.ext import ndb
 import re
 from models import Account
 from models import AccountModel 
-from models import Acknowledge
+from models import Acknowledgement
 from models import Language
 from models import LanguageModel
 from models import Query
@@ -15,7 +16,10 @@ from models import TestCaseModel
 from models import SignIn
 from models import CommentModel 
 from models import ChallengeModel
-from models import ChallengeFeedModel
+from models import Like
+from models import Comment
+from models import ChallengeFeed
+from models import ChallengeFeeds
 from models import FollowModel
 from models import Follow
 from models import Follower
@@ -29,10 +33,10 @@ from google.appengine.ext import ndb
 class CodegressApi(remote.Service):
 	"""Codegress Application API v1"""
 
-	@endpoints.method(Account, Acknowledge, 
+	@endpoints.method(Account, Acknowledgement, 
 		name='user.createAccount', path='user/create', http_method='POST')
 	def create_account(self, request):
-		ack = Acknowledge(status=False)
+		ack = Acknowledgement(status=False)
 		account_key = ndb.Key('AccountModel',request.email)
 		user = AccountModel.query(ancestor=account_key).fetch()
 		username = AccountModel.query(AccountModel.username == request.username).fetch()
@@ -49,10 +53,10 @@ class CodegressApi(remote.Service):
 			ack.status = True
 		return ack
 
-	@endpoints.method(SignIn, Acknowledge, name='user.validateAccount', path='user/validate')
+	@endpoints.method(SignIn, Acknowledgement, name='user.validateAccount', path='user/validate')
 	def check_user(self, request):
 		account_key = ndb.Key('AccountModel',request.email)
-		ack = Acknowledge(status=False)
+		ack = Acknowledgement(status=False)
 		user = AccountModel.query(ancestor=account_key).fetch()
 		if not user:
 			user = AccountModel.query(AccountModel.username == request.email).fetch()
@@ -122,13 +126,13 @@ class CodegressApi(remote.Service):
 	def get_question(self, question_query):
 		return question_query
 
-	@endpoints.method(TestCase, Acknowledge, name='testcase.addTestcase',path='testcase/add')
+	@endpoints.method(TestCase, Acknowledgement, name='testcase.addTestcase',path='testcase/add')
 	def add_testcase(self, request):
 		testcase_key = ndb.Key(TestCaseModel,request.ques_title)
 		testcase = TestCaseModel(parent=testcase_key, test_in=request.test_in, test_out=request.test_out, 
 				points=request.points, ques_title=request.ques_title)
 		testcase.put()
-		return Acknowledge(status=True)
+		return Acknowledgement(status=True)
 
 	@endpoints.method(Query, TestCases, name='testcase.getTestcase',path='testcase/get')
 	def get_testcase(self, request):
@@ -142,7 +146,7 @@ class CodegressApi(remote.Service):
 			testcase_list.append(case)
 		return TestCases(cases=testcase_list)
 
-	@endpoints.method(Query, Acknowledge, name='user.shortListed', path='user/shortlist')
+	@endpoints.method(Query, Acknowledgement, name='user.shortListed', path='user/shortlist')
 	def get_shortlisted_users(self,request):
 		shortListed_users = []
 		accounts = AccountModel.query(AccountModel.username == request.name).fetch()
@@ -153,80 +157,40 @@ class CodegressApi(remote.Service):
 					shortListed_users.append(account.username)
 		else:
 			shortListed_users.append(accounts[0].username)
-		return Acknowledge(data=shortListed_users, status=True)
+		return Acknowledgement(data=shortListed_users, status=True)
 	
-	@endpoints.method(Follow, Follow,name='user.follow',path='user/follow')
-	def add_follow(self, request):
-		follow_instance = Follow()
-		followee_key = ndb.Key(FollowModel, request.followee)
-		acc_follower = AccountModel.query(AccountModel.username == request.follower).fetch()
-		acc_followee = AccountModel.query(AccountModel.username == request.followee).fetch()
+	@FollowModel.method(name='user.follow',path='user/follow')
+	def add_follow(self, follow_instance):
+		followee_key = AccountModel.key(AccountModel, follow_instance.followee)
+		acc_followee = AccountModel.query(AccountModel.username == follow_instance.followee).fetch()
+		acc_follower = AccountModel.query(AccountModel.username == follow_instance.follower).fetch()
 		if acc_follower and acc_followee:
-			follow = FollowModel.query(FollowModel.follower==request.follower,
-				FollowModel.followee==request.followee).fetch()
+			follow = FollowModel.query(FollowModel.follower == follow_instance.follower,
+				FollowModel.followee == follow_instance.followee).fetch()
 			if not follow:
-				follow = FollowModel(follower=acc_follower[0].username, followee=acc_followee[0].username, parent=followee_key).put()
-				follow_instance.follower=request.follower
-				follow_instance.followee=request.followee
+				follow_instance.parent = followee_key
+				follow_instance.put()
 		return follow_instance
 
-	@endpoints.method(Query, Follower,name='user.getFollowers',path='user/get/followers')
-	def get_followers(self, request):
-		followee_key = ndb.Key(AccountModel, request.name)
-		follower = AccountModel.query(AccountModel.username == request.name).fetch()
-		followers = Follower()
-		if follower:
-			follow_query = FollowModel.query(FollowModel.followee == request.name).fetch()
-			follow_list = []
-			for follow in follow_query:
-				follow_list += [follow.follower]
-			followers.names = follow_list
-		return followers
+	@endpoints.method(Query, Acknowledgement, name='user.getFollowSuggestions',path='user/get/follows')
+	def get_follows(self, request):
+		ack = Acknowledgement(status=False)
+		follows = AccountModel.query(AccountModel.username != request.name).fetch()
+		follow_list = []
+		for follow in follows:
+			follow_list.append(follow.username)
+		if follow_list:
+			ack.status = True
+			ack.data = follow_list
+		return ack
 
-	@endpoints.method(Query, Follower,name='user.getFollowees',path='user/get/followees')
-	def get_followees(self, request):
-		follow_key = ndb.Key(FollowModel, request.name)
-		followee = AccountModel.query(AccountModel.username == request.name).fetch()
-		followers = Follower()
-		if followee:
-			follow_query = FollowModel.query(FollowModel.follower == request.name).fetch()
-			follow_list = []
-			for follow in follow_query:
-				follow_list += [follow.followee]
-			followers.names = follow_list
-		return followers
+	@FollowModel.query_method(query_fields=('follower',) ,name='user.getFollowers',path='user/get/followers')
+	def get_followers(self, follower_query):
+		return follower_query
 
-	# @SubmissionModel.method(request_fields=('ques_title','submission_text','submitted_user'),
-	# 	name='submission.addSubmission',path='submission/add',http_method='POST')
-	# def add_submission(self,submission):
-	# 	submission.submission_date = datetime.now()
-	# 	submission.put()
-	# 	return submission
-	
-	# @SubmissionModel.query_method(query_fields=('ques_title','submitted_user'),name='submission.getSubmission',path='submission/get')
-	# def get_submission(self,submission_query):
-	# 	return submission_query
-
-	# @ChallengeFeedModel.method(name='challenge.addChallengeFeed',path='challenge/add/challengefeed')
-	# def add_challenge_feed(self, challenge_feed_instance):
-	# 	ques_key = ndb.Key(QuestionModel, challenge_feed_instance.ques_title)
-	# 	user_key = ndb.Key(AccountModel, challenge_feed_instance.username, parent=ques_key)
-	# 	existing_challenge_feed = ChallengeFeedModel.query(ChallengeFeedModel.ques_title == challenge_feed_instance.ques_title, 
-	# 							ChallengeFeedModel.username == challenge_feed_instance.username).fetch()
-	# 	if existing_challenge_feed:
-	# 		if existing_challenge_feed[0].comment:
-	# 			existing_challenge_feed[0].comment.append(challenge_feed_instance.comment)
-	# 		else:
-	# 			existing_challenge_feed[0].comment = challenge_feed_instance.comment
-	# 		existing_challenge_feed[0].like = challenge_feed_instance.like
-	# 		existing_challenge_feed[0].put()
-	# 	else:
-	# 		ques_key = ndb.Key(QuestionModel, challenge_feed_instance.ques_title)
-	# 		user_key = ndb.Key(AccountModel, challenge_feed_instance.username, parent=ques_key)
-	# 		challenge_feed_instance.parent = user_key
-	# 		challenge_feed_instance.put()
-	# 	return challenge_feed_instance
-
+	@FollowModel.query_method(query_fields=('followee',) ,name='user.getFollowees',path='user/get/followees')
+	def get_followees(self, followee_query):
+		return followee_query
 
 	@ChallengeModel.method(name='challenge.addChallenge',path='challenge/add')
 	def add_challenge(self, challenge_instance):
@@ -297,5 +261,29 @@ class CodegressApi(remote.Service):
 	@ChallengeModel.query_method(query_fields=('challengee',),name='challenge.getChallenges',path='challenge/get/challenges')
 	def get_challenges(self, challenge_query):
 		return challenge_query
+
+	@endpoints.method(Query, ChallengeFeeds, name='challenge.getChallengeFeeds', path='challenge/get/challenge/feeds')
+	def get_challenge_feeds(self, request):
+		f_list = FollowModel.query(FollowModel.follower == request.name).fetch()
+		challenge_list = []
+		for f in f_list:
+			follower = f.follower
+			challenges = ChallengeModel.query(ndb.OR(ChallengeModel.challenger == follower, 
+						ChallengeModel.challengee == follower)).fetch()
+			for challenge in challenges:
+				ques = challenge.ques
+				likes = challenge.ques.likes
+				comments = challenge.ques.comments
+				like_list, comment_list = [], []
+				for l in likes:
+					new_like = Like(username=l.username, liked=l.liked)
+					like_list.append(new_like)
+				for c in comments:
+					new_comment = Comment(username=c.username, datetime=c.datetime, comment_message=c.comment_message)
+					comment_list.append(new_comment)
+				new_question = Question(title=ques.title, text=ques.text, domain=ques.domain, likes=like_list, comments=comment_list)
+				new_challenge = ChallengeFeed(ques=new_question, challengee=challenge.challengee, challenger=challenge.challenger, datetime=challenge.datetime)
+				challenge_list.append(new_challenge)
+		return ChallengeFeeds(feeds=challenge_list)
 
 APPLICATION = endpoints.api_server([CodegressApi])
