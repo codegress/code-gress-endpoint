@@ -20,7 +20,7 @@ class Language(messages.Message):
 	execute = messages.StringField(5)
 	placeholder = messages.StringField(6)
 
-class Acknowledge(messages.Message):
+class Acknowledgement(messages.Message):
 	status = messages.BooleanField(1, required=True)
 	comment = messages.StringField(2)
 	data = messages.StringField(3, repeated=True)
@@ -38,29 +38,40 @@ class TestCase(messages.Message):
 class TestCases(messages.Message):
 	cases = messages.MessageField(TestCase, 1, repeated=True)
 
+class Like(messages.Message):
+	username = messages.StringField(1, required=True)
+	liked = messages.BooleanField(2, required=True)
+
+class Comment(messages.Message):
+	username = messages.StringField(1, required=True)
+	datetime = message_types.DateTimeField(2, required=True)
+	comment_message = messages.StringField(3, required=True)
+
 class Question(messages.Message):
 	title = messages.StringField(1, required=True)
 	text = messages.StringField(2, required=True)
 	domain = messages.StringField(3, required=True)
+	likes = messages.MessageField(Like, 4, repeated=True)
+	comments = messages.MessageField(Comment, 5, repeated=True)
 
 class Questions(messages.Message):
 	ques = messages.MessageField(Question, 1, repeated=True)
 
 class ChallengeFeed(messages.Message):
-	ques_title = messages.StringField(1, required=True)
-	username = messages.StringField(2)
-	like = messages.BooleanField(3)
-	comment = messages.StringField(4)
+	ques = messages.MessageField(Question, 1)
+	challenger = messages.StringField(2,)
+	challengee = messages.StringField(3)
+	datetime = message_types.DateTimeField(4)
 
 class ChallengeFeeds(messages.Message):
-	feeds = messages.MessageField(ChallengeFeed,1,repeated=True)
+	feeds = messages.MessageField(ChallengeFeed, 1, repeated=True)
 
 class Follow(messages.Message):
 	follower = messages.StringField(1)
 	followee = messages.StringField(2)
 
 class Follower(messages.Message):
-	names = messages.StringField(1,repeated=True)
+	names = messages.MessageField(Follow, 1, repeated=True)
 
 class AccountModel(ndb.Model):
 	username = ndb.StringProperty(required=True)
@@ -99,12 +110,6 @@ class TestCaseModel(ndb.Model):
 	points = ndb.FloatProperty(required=True)
 	ques_title = ndb.StringProperty(required=True)
 
-# class SubmissionModel(EndpointsModel):
-# 	ques_title = ndb.StringProperty(required=True)
-# 	submission_text = ndb.TextProperty()
-# 	submission_date = ndb.DateTimeProperty()
-# 	submitted_user = ndb.StringProperty(required=True)
-
 class ChallengeModel(EndpointsModel):
 	ques = ndb.StructuredProperty(QuestionModel, required=True)
 	challenger = ndb.StringProperty(required=True)
@@ -114,21 +119,6 @@ class ChallengeModel(EndpointsModel):
 	accepted = ndb.BooleanProperty()
 	solved = ndb.BooleanProperty()
 
-# class UserChallengeModel(EndpointsModel):
-# 	challenge = ndb.StructuredProperty(ChallengeModel,required=True)
-# 	state = ndb.StringProperty(choices=['Accept','Reject'],required=True)
-
-# class UserChallengerModel(ndb.Model):
-# 	challenge = ndb.StructuredProperty(ChallengeModel, required=True)
-# 	challenger = ndb.StructuredProperty(AccountModel, required=True)
-# 	challengee = ndb.StructuredProperty(AccountModel, required=True)
-
-class ChallengeFeedModel(EndpointsModel):
-	ques_title = ndb.StringProperty()
-	username = ndb.StringProperty()
-	like = ndb.BooleanProperty()
-	comment = ndb.StructuredProperty(CommentModel,repeated=True)
-	
-class FollowModel(ndb.Model):
+class FollowModel(EndpointsModel):
 	follower = ndb.StringProperty(required=True)
 	followee = ndb.StringProperty(required=True)
