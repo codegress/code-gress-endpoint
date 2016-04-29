@@ -118,11 +118,12 @@ class TestCaseModel(ndb.Model):
 # 	submission_date = ndb.DateTimeProperty()
 # 	submitted_user = ndb.StringProperty(required=True)
 
-class MessagesModel(EndpointsModel):
+class MessageModel(EndpointsModel):
 	message = ndb.StringProperty(required=True)
 	datetime = ndb.DateTimeProperty()
 	frm = ndb.StringProperty(required=True)
 	to = ndb.StringProperty(required=True)
+	read = ndb.BooleanProperty()
  
 class ChallengeModel(EndpointsModel):
 	ques = ndb.StructuredProperty(QuestionModel, required=True)

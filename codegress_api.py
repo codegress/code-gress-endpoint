@@ -23,10 +23,10 @@ from models import ChallengeFeeds
 from models import FollowModel
 from models import Follow
 from models import Follower
+from models import MessageModel
 from protorpc import remote
 from hashlib import md5
 from datetime import datetime
-
 from google.appengine.ext import ndb
 
 @endpoints.api(name='codegress',version='v1')
@@ -261,6 +261,19 @@ class CodegressApi(remote.Service):
 	@ChallengeModel.query_method(query_fields=('challengee',),name='challenge.getChallenges',path='challenge/get/challenges')
 	def get_challenges(self, challenge_query):
 		return challenge_query
+
+	@MessageModel.method(name='message.send', path='message/send')
+	def send_message(self, message_instance):
+		message_instance.datetime=datetime.now()
+		message_instance.put()
+		return message_instance
+
+	@MessageModel.query_method(query_fields=('frm',), name='message.getMessageFrom',path='message/get/from')
+	def get_message_frm(self, message_query):
+		return message_query
+	@MessageModel.query_method(query_fields=('to',), name='message.getMessageTo',path='message/get/to')
+	def get_message_to(self, message_query):
+		return message_query
 
 	@endpoints.method(Query, ChallengeFeeds, name='challenge.getChallengeFeeds', path='challenge/get/challenge/feeds')
 	def get_challenge_feeds(self, request):
