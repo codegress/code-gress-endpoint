@@ -22,7 +22,7 @@ from models import ChallengeFeed
 from models import ChallengeFeeds
 from models import FollowModel
 from models import Follow
-from models import Follower
+from models import Follower 
 from models import MessageModel
 from protorpc import remote
 from hashlib import md5
@@ -271,6 +271,7 @@ class CodegressApi(remote.Service):
 	@MessageModel.query_method(query_fields=('frm',), name='message.getMessageFrom',path='message/get/from')
 	def get_message_frm(self, message_query):
 		return message_query
+	
 	@MessageModel.query_method(query_fields=('to',), name='message.getMessageTo',path='message/get/to')
 	def get_message_to(self, message_query):
 		return message_query
@@ -280,9 +281,11 @@ class CodegressApi(remote.Service):
 		f_list = FollowModel.query(FollowModel.follower == request.name).fetch()
 		challenge_list = []
 		for f in f_list:
-			follower = f.follower
-			challenges = ChallengeModel.query(ndb.OR(ChallengeModel.challenger == follower, 
-						ChallengeModel.challengee == follower)).fetch()
+			followee = f.followee
+			if followee == request.name:
+				continue;
+			challenges = ChallengeModel.query(ndb.OR(ChallengeModel.challenger == followee, 
+						ChallengeModel.challengee == followee)).fetch()
 			for challenge in challenges:
 				ques = challenge.ques
 				likes = challenge.ques.likes

@@ -8,7 +8,7 @@ class Account(messages.Message):
 	password = messages.StringField(2,required=True)
 	email = messages.StringField(3,required=True) 
 
-class SignIn(messages.Message):
+class SignIn(messages.Message): 
 	email = messages.StringField(1,required=True)
 	password = messages.StringField(2,required=True)
 
@@ -104,19 +104,11 @@ class QuestionModel(EndpointsModel):
 	likes = ndb.StructuredProperty(LikeModel, repeated=True)
 	comments = ndb.StructuredProperty(CommentModel, repeated=True)
 	
-class TestCaseModel(ndb.Model):
-	test_in = ndb.StringProperty(required=True)
-	test_out = ndb.StringProperty(required=True)
+class TestCaseModel(EndpointsModel):
+	test_in = ndb.StringProperty()
+	test_out = ndb.StringProperty()
 	points = ndb.FloatProperty(required=True)
-	ques_title = ndb.StringProperty(required=True)
-
- 
-
-# class SubmissionModel(EndpointsModel):
-# 	ques_title = ndb.StringProperty(required=True)
-# 	submission_text = ndb.TextProperty()
-# 	submission_date = ndb.DateTimeProperty()
-# 	submitted_user = ndb.StringProperty(required=True)
+	ques = ndb.StructuredProperty(Question, required=True)
 
 class MessageModel(EndpointsModel):
 	message = ndb.StringProperty(required=True)
