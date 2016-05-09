@@ -93,19 +93,18 @@ class CodegressApi(remote.Service):
 		return question_instance 
 
 	@QuestionModel.method(request_fields=('title','domain','likes'),name='question.addQuestionLike', path='question/like/add')
-	def add_question_like(self, question_instance):
-		ques = QuestionModel.query(QuestionModel.domain == question_instance.domain, QuestionModel.title==question_instance.title).fetch()
+	def add_question_like(self, q_instance):
+		ques = QuestionModel.query(QuestionModel.domain == q_instance.domain, QuestionModel.title==q_instance.title).fetch()
 		if ques:
-			likes = ques[0].likes
-			for like in likes:
-				if like.username == question_instance.likes[0].username:
-					return question_instance
-			if likes:
-				ques[0].likes += question_instance.likes
+			if ques[0].likes:
+				for q in ques[0].likes:
+					if q.username == q_instance.likes[0].username:
+						return q_instance
+				ques[0].likes += q_instance.likes
 			else:
-				ques[0].likes = question_instance.likes
+				ques[0].likes = q_instance.likes
 			ques[0].put()
-		return question_instance
+		return q_instance
 	
 	@QuestionModel.method(request_fields=('title','domain','comments'),name='question.addQuestionComment', path='question/comment/add')
 	def add_question_comment(self, question_instance):
@@ -116,6 +115,7 @@ class CodegressApi(remote.Service):
 			else:
 				ques[0].comments = question_instance.comments
 			ques[0].put()
+			return ques[0]
 		return question_instance
 
 	@QuestionModel.query_method(query_fields=('domain',),name='question.getDomain', path='domain/get')
@@ -207,52 +207,35 @@ class CodegressApi(remote.Service):
 			challenge_instance.put()
 		return challenge_instance
 
-	@ChallengeModel.method(name='challenge.solved', path='challenge/solved')
+	@ChallengeModel.method(name='challenge.modify', path='challenge/modify')
 	def solved_challenge(self, challenge_instance):
 		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
 		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
 							ChallengeModel.challengee == challenge_instance.challengee).fetch() 
 		if already_challenged:
-			if not already_challenged[0].solved:
-				already_challenged[0].seen = True
-				already_challenged[0].accepted = True
-				already_challenged[0].put()
-				# already_challenged[0].solved = True
+			already_challenged[0].seen = challenge_instance.seen
+			already_challenged[0].accepted = challenge_instance.accepted
+			already_challenged[0].solved = challenge_instance.solved
+			already_challenged[0].rejected = challenge_instance.rejected
+			already_challenged[0].put()
 		return already_challenged[0]
 
-	@ChallengeModel.method(name='challenge.accepted',path='challenge/accepted')
-	def accepted_challenge(self, challenge_instance):
-		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
-		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
-							ChallengeModel.challengee == challenge_instance.challengee).fetch()
-		if already_challenged:
-			if not already_challenged[0].accepted:
-				already_challenged[0].accepted = True
-				already_challenged[0].put()
-		return already_challenged[0]
-
-	@ChallengeModel.method(name='challenge.seen',path='challenge/seen')
-	def seen_challenge(self, challenge_instance):
-		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
-		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
-							ChallengeModel.challengee == challenge_instance.challengee).fetch()
-		if already_challenged:
-			if not already_challenged[0].seen:
-				already_challenged[0].seen = True
-				already_challenged[0].put()
-		return already_challenged[0]
-
-	@ChallengeModel.method(name='challenge.rejected', path='challenge/rejected')
-	def rejected_challenge(self, challenge_instance):
-		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
-		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
-							ChallengeModel.challengee == challenge_instance.challengee).fetch()
-		if already_challenged:
-			if not already_challenged[0].rejected:
-				already_challenged[0].rejected = True
-				already_challenged[0].put()
-		return already_challenged[0]
-
+	@ChallengeModel.method(name='challenge.addLike',path='challenge/add/like')
+	def add_challenge_like(self, c_ins):
+		ques = QuestionModel.query(QuestionModel.title == c_ins.ques.title, QuestionModel.domain == c_ins.ques.domain).fetch()
+		if ques:
+			challenge = ChallengeModel.query(ChallengeModel.challenger == c_ins.challenger, 
+				ChallengeModel.challengee == c_ins.challengee).fetch()
+			for c in challenge:
+				if c.ques.title == c_ins.ques.title:
+					likes = c.likes
+					for like in likes:
+						if like.username == c_ins.likes[0].username:
+							return c
+					c.likes += c_ins.likes
+					c.put()
+					return c
+		return c_ins
 
 	@ChallengeModel.query_method(query_fields=('challenger',),name='challenge.getChallenged',path='challenge/get/challenged')
 	def get_challenged_challenges(self, challenge_query):
@@ -262,43 +245,63 @@ class CodegressApi(remote.Service):
 	def get_challenges(self, challenge_query):
 		return challenge_query
 
+
 	@MessageModel.method(name='message.send', path='message/send')
 	def send_message(self, message_instance):
 		message_instance.datetime=datetime.now()
+		message_instance.read = False
 		message_instance.put()
 		return message_instance
 
 	@MessageModel.query_method(query_fields=('frm',), name='message.getMessageFrom',path='message/get/from')
 	def get_message_frm(self, message_query):
-		return message_query
+		return message_query.order(-MessageModel.datetime)
 	
 	@MessageModel.query_method(query_fields=('to',), name='message.getMessageTo',path='message/get/to')
 	def get_message_to(self, message_query):
-		return message_query
+		return message_query.order(-MessageModel.datetime)
+
+	@MessageModel.query_method(query_fields=('to','read'), name='message.getMessageRead',path='message/get/read')
+	def get_message_read(self, message_query):
+		return message_query.order(-MessageModel.datetime)
+
+	@MessageModel.method(name='message.readTrue', path='message/read/true')
+	def read_true_message(self, msg_instance):
+		messages = MessageModel.query(MessageModel.to == msg_instance.to, MessageModel.read == False).order(-MessageModel.datetime)
+		for m in messages:
+			m.read = True
+			m.put()
+		return msg_instance
 
 	@endpoints.method(Query, ChallengeFeeds, name='challenge.getChallengeFeeds', path='challenge/get/challenge/feeds')
 	def get_challenge_feeds(self, request):
 		f_list = FollowModel.query(FollowModel.follower == request.name).fetch()
 		challenge_list = []
+		liked_by_user = False
 		for f in f_list:
 			followee = f.followee
-			if followee == request.name:
-				continue;
-			challenges = ChallengeModel.query(ndb.OR(ChallengeModel.challenger == followee, 
-						ChallengeModel.challengee == followee)).fetch()
+			challenges = ChallengeModel.query(ndb.OR(ChallengeModel.challenger == followee, ChallengeModel.challengee == followee)).order(-ChallengeModel.datetime)
 			for challenge in challenges:
+				if challenge.challengee == request.name or challenge.challenger == request.name:
+					continue
 				ques = challenge.ques
 				likes = challenge.ques.likes
 				comments = challenge.ques.comments
-				like_list, comment_list = [], []
+				c_likes = challenge.likes
+				ques_like_list, ch_like_list, comment_list = [], [], [] 
+				for c in c_likes:
+					if c.username == request.name:
+						liked_by_user = True
+					new_like = Like(username=c.username, liked=c.liked)
+					ch_like_list.append(new_like)
 				for l in likes:
 					new_like = Like(username=l.username, liked=l.liked)
-					like_list.append(new_like)
+					ques_like_list.append(new_like)
 				for c in comments:
 					new_comment = Comment(username=c.username, datetime=c.datetime, comment_message=c.comment_message)
 					comment_list.append(new_comment)
-				new_question = Question(title=ques.title, text=ques.text, domain=ques.domain, likes=like_list, comments=comment_list)
-				new_challenge = ChallengeFeed(ques=new_question, challengee=challenge.challengee, challenger=challenge.challenger, datetime=challenge.datetime)
+				new_question = Question(title=ques.title, text=ques.text, domain=ques.domain, likes=ques_like_list, comments=comment_list)
+				new_challenge = ChallengeFeed(liked_by_user=liked_by_user,likes=ch_like_list, ques=new_question, challengee=challenge.challengee, challenger=challenge.challenger, datetime=challenge.datetime)
 				challenge_list.append(new_challenge)
 		return ChallengeFeeds(feeds=challenge_list)
 

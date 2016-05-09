@@ -62,6 +62,8 @@ class ChallengeFeed(messages.Message):
 	challenger = messages.StringField(2,)
 	challengee = messages.StringField(3)
 	datetime = message_types.DateTimeField(4)
+	likes = messages.MessageField(Like, 5, repeated=True)
+	liked_by_user = messages.BooleanField(6)
 
 class ChallengeFeeds(messages.Message):
 	feeds = messages.MessageField(ChallengeFeed, 1, repeated=True)
@@ -104,17 +106,17 @@ class QuestionModel(EndpointsModel):
 	likes = ndb.StructuredProperty(LikeModel, repeated=True)
 	comments = ndb.StructuredProperty(CommentModel, repeated=True)
 	
-class TestCaseModel(EndpointsModel):
+class TestCaseModel(ndb.Model):
 	test_in = ndb.StringProperty()
 	test_out = ndb.StringProperty()
 	points = ndb.FloatProperty(required=True)
-	ques = ndb.StructuredProperty(Question, required=True)
+	ques_title = ndb.StringProperty()
 
 class MessageModel(EndpointsModel):
-	message = ndb.StringProperty(required=True)
+	message = ndb.StringProperty()
 	datetime = ndb.DateTimeProperty()
-	frm = ndb.StringProperty(required=True)
-	to = ndb.StringProperty(required=True)
+	frm = ndb.StringProperty()
+	to = ndb.StringProperty()
 	read = ndb.BooleanProperty()
  
 class ChallengeModel(EndpointsModel):
@@ -122,6 +124,8 @@ class ChallengeModel(EndpointsModel):
 	challenger = ndb.StringProperty(required=True)
 	challengee = ndb.StringProperty(required=True)
 	datetime = ndb.DateTimeProperty()
+	likes = ndb.StructuredProperty(LikeModel, repeated=True)
+	comments = ndb.StructuredProperty(CommentModel, repeated=True)
 	seen = ndb.BooleanProperty()
 	accepted = ndb.BooleanProperty()
 	solved = ndb.BooleanProperty()
@@ -130,3 +134,4 @@ class ChallengeModel(EndpointsModel):
 class FollowModel(EndpointsModel):
 	follower = ndb.StringProperty(required=True)
 	followee = ndb.StringProperty(required=True)
+	user = ndb.UserProperty()
