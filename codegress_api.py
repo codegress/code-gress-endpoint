@@ -9,7 +9,7 @@ from models import LanguageModel
 from models import Query
 from models import Question
 from models import Questions
-from models import QuestionModel
+from models import QuestionModel 
 from models import TestCase
 from models import TestCases
 from models import TestCaseModel
@@ -175,10 +175,12 @@ class CodegressApi(remote.Service):
 	@endpoints.method(Query, Acknowledgement, name='user.getFollowSuggestions',path='user/get/follows')
 	def get_follows(self, request):
 		ack = Acknowledgement(status=False)
-		follows = AccountModel.query(AccountModel.username != request.name).fetch()
+		follows = FollowModel.query(FollowModel.followee != request.name).fetch()
 		follow_list = []
 		for follow in follows:
-			follow_list.append(follow.username)
+			followee = follow.followee
+			if followee not in follow_list:
+				follow_list.append(followee)
 		if follow_list:
 			ack.status = True
 			ack.data = follow_list
@@ -200,6 +202,7 @@ class CodegressApi(remote.Service):
 		if not already_challenged:
 			challenge_instance.datetime = datetime.now()
 			challenge_instance.parent = ndb.Key(ChallengeModel, challenge_instance.ques.title)
+			challenge_instance.ques = ques[0]
 			challenge_instance.seen = False
 			challenge_instance.accepted = False
 			challenge_instance.solved = False
@@ -210,15 +213,25 @@ class CodegressApi(remote.Service):
 	@ChallengeModel.method(name='challenge.modify', path='challenge/modify')
 	def solved_challenge(self, challenge_instance):
 		ques = QuestionModel.query(QuestionModel.title == challenge_instance.ques.title).fetch()
-		already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
-							ChallengeModel.challengee == challenge_instance.challengee).fetch() 
-		if already_challenged:
-			already_challenged[0].seen = challenge_instance.seen
-			already_challenged[0].accepted = challenge_instance.accepted
-			already_challenged[0].solved = challenge_instance.solved
-			already_challenged[0].rejected = challenge_instance.rejected
-			already_challenged[0].put()
-		return already_challenged[0]
+		if ques:
+			already_challenged = ChallengeModel.query(ChallengeModel.ques.title == ques[0].title, ChallengeModel.challenger == challenge_instance.challenger,
+								ChallengeModel.challengee == challenge_instance.challengee).fetch() 
+			seen = challenge_instance.seen
+			accepted = challenge_instance.accepted
+			solved = challenge_instance.solved
+			rejected = challenge_instance.rejected
+			if already_challenged:
+				if seen:
+					already_challenged[0].seen = challenge_instance.seen
+				if accepted:
+					already_challenged[0].accepted = challenge_instance.accepted
+				if solved:
+					already_challenged[0].solved = challenge_instance.solved
+				if rejected:
+					already_challenged[0].rejected = challenge_instance.rejected
+				already_challenged[0].put()
+				challenge_instance = already_challenged[0]
+		return challenge_instance
 
 	@ChallengeModel.method(name='challenge.addLike',path='challenge/add/like')
 	def add_challenge_like(self, c_ins):
@@ -239,11 +252,11 @@ class CodegressApi(remote.Service):
 
 	@ChallengeModel.query_method(query_fields=('challenger',),name='challenge.getChallenged',path='challenge/get/challenged')
 	def get_challenged_challenges(self, challenge_query):
-		return challenge_query
+		return challenge_query.order(-ChallengeModel.datetime)
 
 	@ChallengeModel.query_method(query_fields=('challengee',),name='challenge.getChallenges',path='challenge/get/challenges')
 	def get_challenges(self, challenge_query):
-		return challenge_query
+		return challenge_query.order(-ChallengeModel.datetime)
 
 
 	@MessageModel.method(name='message.send', path='message/send')

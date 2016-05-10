@@ -119,6 +119,7 @@ class MessageModel(EndpointsModel):
 	to = ndb.StringProperty()
 	read = ndb.BooleanProperty()
  
+ 
 class ChallengeModel(EndpointsModel):
 	ques = ndb.StructuredProperty(QuestionModel, required=True)
 	challenger = ndb.StringProperty(required=True)
